@@ -17,4 +17,10 @@ export type Task = {
   isUrgent: boolean;
   status: Status;
   managerMessage?: string;
+
+  assignedTo?: string | null;
+  assignedBy?: string | null;
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
 };

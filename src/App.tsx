@@ -5,15 +5,45 @@ import {
   Route,
   Routes,
 } from "react-router-dom";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Layout from "./components/layout/Layout";
 import useTasks from "./hooks/useTasks";
 import Dashboard from "./pages/Dashboard";
+import LoginPage from "./pages/LoginPage";
+import SignUpPage from "./pages/SignUpPage";
 import TaskStatusPage from "./pages/TaskStatusPage";
 import type { Task } from "./types/task";
 
 const THEME_STORAGE_KEY = "gameplan-theme";
 
 function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route
+          path="/login"
+          element={<LoginPage />}
+        />
+
+        <Route
+          path="/signup"
+          element={<SignUpPage />}
+        />
+
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <GamePlanApplication />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+function GamePlanApplication() {
   const {
     tasks,
     selectedTask,
@@ -30,25 +60,27 @@ function App() {
     handleDeleteTask,
   } = useTasks();
 
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] =
+    useState("");
 
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem(
-      THEME_STORAGE_KEY,
-    );
+  const [isDarkMode, setIsDarkMode] =
+    useState(() => {
+      const savedTheme = localStorage.getItem(
+        THEME_STORAGE_KEY,
+      );
 
-    if (savedTheme === "dark") {
-      return true;
-    }
+      if (savedTheme === "dark") {
+        return true;
+      }
 
-    if (savedTheme === "light") {
-      return false;
-    }
+      if (savedTheme === "light") {
+        return false;
+      }
 
-    return window.matchMedia(
-      "(prefers-color-scheme: dark)",
-    ).matches;
-  });
+      return window.matchMedia(
+        "(prefers-color-scheme: dark)",
+      ).matches;
+    });
 
   useEffect(() => {
     localStorage.setItem(
@@ -64,12 +96,15 @@ function App() {
     function handleKeyboardShortcut(
       event: KeyboardEvent,
     ) {
-      const activeElement = document.activeElement;
+      const activeElement =
+        document.activeElement;
 
       const isTyping =
         activeElement instanceof HTMLInputElement ||
-        activeElement instanceof HTMLTextAreaElement ||
-        activeElement instanceof HTMLSelectElement;
+        activeElement instanceof
+          HTMLTextAreaElement ||
+        activeElement instanceof
+          HTMLSelectElement;
 
       if (event.key === "Escape") {
         setIsCreateModalOpen(false);
@@ -119,23 +154,25 @@ function App() {
     .trim()
     .toLowerCase();
 
-  const filteredTasks = tasks.filter((task) => {
-    if (!normalizedSearch) {
-      return true;
-    }
+  const filteredTasks = tasks.filter(
+    (task) => {
+      if (!normalizedSearch) {
+        return true;
+      }
 
-    return (
-      task.title
-        .toLowerCase()
-        .includes(normalizedSearch) ||
-      task.description
-        .toLowerCase()
-        .includes(normalizedSearch) ||
-      (task.managerMessage ?? "")
-        .toLowerCase()
-        .includes(normalizedSearch)
-    );
-  });
+      return (
+        task.title
+          .toLowerCase()
+          .includes(normalizedSearch) ||
+        task.description
+          .toLowerCase()
+          .includes(normalizedSearch) ||
+        (task.managerMessage ?? "")
+          .toLowerCase()
+          .includes(normalizedSearch)
+      );
+    },
+  );
 
   const todoTasks = filteredTasks.filter(
     (task) => task.status === "todo",
@@ -145,134 +182,162 @@ function App() {
     (task) => task.isUrgent,
   ).length;
 
-  const inProgressTasks = filteredTasks.filter(
-    (task) => task.status === "inprogress",
-  ).length;
+  const inProgressTasks =
+    filteredTasks.filter(
+      (task) =>
+        task.status === "inprogress",
+    ).length;
 
-  const completedTasks = filteredTasks.filter(
-    (task) => task.status === "done",
-  ).length;
+  const completedTasks =
+    filteredTasks.filter(
+      (task) => task.status === "done",
+    ).length;
 
   return (
-    <BrowserRouter>
-      <Layout
-        isDarkMode={isDarkMode}
-        onToggleTheme={() =>
-          setIsDarkMode(
-            (currentMode) => !currentMode,
-          )
-        }
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-      >
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <HomePage
-                tasks={tasks}
-                isDarkMode={isDarkMode}
-              />
-            }
-          />
+    <Layout
+      isDarkMode={isDarkMode}
+      onToggleTheme={() =>
+        setIsDarkMode(
+          (currentMode) => !currentMode,
+        )
+      }
+      searchQuery={searchQuery}
+      onSearchChange={setSearchQuery}
+    >
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <HomePage
+              tasks={tasks}
+              isDarkMode={isDarkMode}
+            />
+          }
+        />
 
-          <Route
-            path="/tasks"
-            element={
-              <Dashboard
-                tasks={filteredTasks}
-                selectedTask={selectedTask}
-                isCreateModalOpen={isCreateModalOpen}
-                isLoadingTasks={isLoadingTasks}
-                isSavingTask={isSavingTask}
-                isDarkMode={isDarkMode}
-                canReview={canReview}
-                todoTasks={todoTasks}
-                urgentTasks={urgentTasks}
-                inProgressTasks={inProgressTasks}
-                completedTasks={completedTasks}
-                onSelectTask={setSelectedTask}
-                onOpenCreateModal={() =>
-                  setIsCreateModalOpen(true)
-                }
-                onCloseCreateModal={() =>
-                  setIsCreateModalOpen(false)
-                }
-                onCreateTask={handleCreateTask}
-                onMoveTask={handleMoveTask}
-                onReturnTask={handleReturnTask}
-                onUpdateTask={handleUpdateTask}
-                onDeleteTask={handleDeleteTask}
-              />
-            }
-          />
+        <Route
+          path="/tasks"
+          element={
+            <Dashboard
+              tasks={filteredTasks}
+              selectedTask={selectedTask}
+              isCreateModalOpen={
+                isCreateModalOpen
+              }
+              isLoadingTasks={isLoadingTasks}
+              isSavingTask={isSavingTask}
+              isDarkMode={isDarkMode}
+              canReview={canReview}
+              todoTasks={todoTasks}
+              urgentTasks={urgentTasks}
+              inProgressTasks={
+                inProgressTasks
+              }
+              completedTasks={completedTasks}
+              onSelectTask={setSelectedTask}
+              onOpenCreateModal={() =>
+                setIsCreateModalOpen(true)
+              }
+              onCloseCreateModal={() =>
+                setIsCreateModalOpen(false)
+              }
+              onCreateTask={
+                handleCreateTask
+              }
+              onMoveTask={handleMoveTask}
+              onReturnTask={
+                handleReturnTask
+              }
+              onUpdateTask={
+                handleUpdateTask
+              }
+              onDeleteTask={
+                handleDeleteTask
+              }
+            />
+          }
+        />
 
-          <Route
-            path="/tasks/:status"
-            element={
-              <TaskStatusPage
-                tasks={filteredTasks}
-                selectedTask={selectedTask}
-                isCreateModalOpen={isCreateModalOpen}
-                isLoadingTasks={isLoadingTasks}
-                isSavingTask={isSavingTask}
-                isDarkMode={isDarkMode}
-                canReview={canReview}
-                onSelectTask={setSelectedTask}
-                onOpenCreateModal={() =>
-                  setIsCreateModalOpen(true)
-                }
-                onCloseCreateModal={() =>
-                  setIsCreateModalOpen(false)
-                }
-                onCreateTask={handleCreateTask}
-                onMoveTask={handleMoveTask}
-                onReturnTask={handleReturnTask}
-                onUpdateTask={handleUpdateTask}
-                onDeleteTask={handleDeleteTask}
-              />
-            }
-          />
+        <Route
+          path="/tasks/:status"
+          element={
+            <TaskStatusPage
+              tasks={filteredTasks}
+              selectedTask={selectedTask}
+              isCreateModalOpen={
+                isCreateModalOpen
+              }
+              isLoadingTasks={isLoadingTasks}
+              isSavingTask={isSavingTask}
+              isDarkMode={isDarkMode}
+              canReview={canReview}
+              onSelectTask={setSelectedTask}
+              onOpenCreateModal={() =>
+                setIsCreateModalOpen(true)
+              }
+              onCloseCreateModal={() =>
+                setIsCreateModalOpen(false)
+              }
+              onCreateTask={
+                handleCreateTask
+              }
+              onMoveTask={handleMoveTask}
+              onReturnTask={
+                handleReturnTask
+              }
+              onUpdateTask={
+                handleUpdateTask
+              }
+              onDeleteTask={
+                handleDeleteTask
+              }
+            />
+          }
+        />
 
-          <Route
-            path="/calendar"
-            element={
-              <CalendarPage
-                tasks={filteredTasks}
-                isDarkMode={isDarkMode}
-              />
-            }
-          />
+        <Route
+          path="/calendar"
+          element={
+            <CalendarPage
+              tasks={filteredTasks}
+              isDarkMode={isDarkMode}
+            />
+          }
+        />
 
-          <Route
-            path="/analytics"
-            element={
-              <ComingSoonPage
-                title="Analytics"
-                description="Task performance, completion rates, overdue work, and team productivity will appear here."
-                isDarkMode={isDarkMode}
-              />
-            }
-          />
+        <Route
+          path="/analytics"
+          element={
+            <ComingSoonPage
+              title="Analytics"
+              description="Task performance, completion rates, overdue work, and team productivity will appear here."
+              isDarkMode={isDarkMode}
+            />
+          }
+        />
 
-          <Route
-            path="/settings"
-            element={
-              <ComingSoonPage
-                title="Settings"
-                description="Workspace, profile, notification, and application settings will appear here."
-                isDarkMode={isDarkMode}
-              />
-            }
-          />
+        <Route
+          path="/settings"
+          element={
+            <ComingSoonPage
+              title="Settings"
+              description="Workspace, profile, notification, and application settings will appear here."
+              isDarkMode={isDarkMode}
+            />
+          }
+        />
 
-          <Route
-            path="*"
-            element={<Navigate to="/" replace />}
-          />
-        </Routes>
-      </Layout>
-    </BrowserRouter>
+        <Route
+          path="*"
+          element={
+            <Navigate
+              to="/"
+              replace
+            />
+          }
+        />
+      </Routes>
+    </Layout>
   );
 }
 
@@ -316,7 +381,7 @@ function HomePage({
               : "text-slate-900"
           }`}
         >
-          Sports operations, organized.
+          Team operations, organized.
         </h1>
 
         <p
@@ -326,32 +391,33 @@ function HomePage({
               : "text-slate-600"
           }`}
         >
-          GamePlan helps sports organizations manage
-          operational tasks, deadlines, urgent work,
-          reviews, and completed responsibilities from
-          one centralized platform.
+          GamePlan helps organizations
+          manage tasks, deadlines, urgent
+          work, reviews, and completed
+          responsibilities from one
+          centralized platform.
         </p>
       </section>
 
       <section className="grid gap-5 md:grid-cols-3">
         <InfoCard
           title="Your role"
-          description="Coordinate team operations, assign responsibilities, review work, and keep deadlines visible."
+          description="Coordinate operations, complete assigned responsibilities, review work, and keep deadlines visible."
           icon="👤"
           isDarkMode={isDarkMode}
         />
 
         <InfoCard
-          title="The organization"
-          description="Sports staff can use GamePlan to coordinate game preparation, media, equipment, and administrative work."
-          icon="🏟️"
+          title="Your team"
+          description="Members and supervisors can collaborate from one organized and secure workspace."
+          icon="🤝"
           isDarkMode={isDarkMode}
         />
 
         <InfoCard
           title="The application"
           description="Create tasks, track progress, review submissions, view due dates, and identify urgent work."
-          icon="⚽"
+          icon="✅"
           isDarkMode={isDarkMode}
         />
       </section>
@@ -373,9 +439,10 @@ function HomePage({
   );
 }
 
-type CalendarPageProps = PageThemeProps & {
-  tasks: Task[];
-};
+type CalendarPageProps =
+  PageThemeProps & {
+    tasks: Task[];
+  };
 
 function CalendarPage({
   tasks,
@@ -383,8 +450,12 @@ function CalendarPage({
 }: CalendarPageProps) {
   const sortedTasks = [...tasks].sort(
     (firstTask, secondTask) =>
-      new Date(firstTask.dueDate).getTime() -
-      new Date(secondTask.dueDate).getTime(),
+      new Date(
+        firstTask.dueDate,
+      ).getTime() -
+      new Date(
+        secondTask.dueDate,
+      ).getTime(),
   );
 
   return (
@@ -462,7 +533,9 @@ function CalendarPage({
               </p>
 
               <p className="mt-1 font-bold text-blue-900">
-                {formatDueDate(task.dueDate)}
+                {formatDueDate(
+                  task.dueDate,
+                )}
               </p>
             </div>
           </article>
@@ -476,7 +549,8 @@ function CalendarPage({
                 : "border-slate-300 text-slate-500"
             }`}
           >
-            No tasks are currently scheduled.
+            No tasks are currently
+            scheduled.
           </div>
         )}
       </div>
@@ -484,11 +558,12 @@ function CalendarPage({
   );
 }
 
-type InfoCardProps = PageThemeProps & {
-  title: string;
-  description: string;
-  icon: string;
-};
+type InfoCardProps =
+  PageThemeProps & {
+    title: string;
+    description: string;
+    icon: string;
+  };
 
 function InfoCard({
   title,
@@ -504,7 +579,9 @@ function InfoCard({
           : "border-slate-200 bg-white"
       }`}
     >
-      <div className="text-3xl">{icon}</div>
+      <div className="text-3xl">
+        {icon}
+      </div>
 
       <h2
         className={`mt-4 text-xl font-bold ${
@@ -529,10 +606,11 @@ function InfoCard({
   );
 }
 
-type SummaryCardProps = PageThemeProps & {
-  label: string;
-  value: number;
-};
+type SummaryCardProps =
+  PageThemeProps & {
+    label: string;
+    value: number;
+  };
 
 function SummaryCard({
   label,
@@ -570,10 +648,11 @@ function SummaryCard({
   );
 }
 
-type ComingSoonPageProps = PageThemeProps & {
-  title: string;
-  description: string;
-};
+type ComingSoonPageProps =
+  PageThemeProps & {
+    title: string;
+    description: string;
+  };
 
 function ComingSoonPage({
   title,
@@ -615,12 +694,19 @@ function ComingSoonPage({
   );
 }
 
-function formatDueDate(dueDate: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(`${dueDate}T00:00:00`));
+function formatDueDate(
+  dueDate: string,
+) {
+  return new Intl.DateTimeFormat(
+    "en-US",
+    {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    },
+  ).format(
+    new Date(`${dueDate}T00:00:00`),
+  );
 }
 
 export default App;

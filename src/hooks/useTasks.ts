@@ -1,4 +1,9 @@
-import { useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+import { useAuth } from "../context/AuthContext";
 import {
   createTask as createTaskInDatabase,
   deleteTask as deleteTaskFromDatabase,
@@ -7,74 +12,142 @@ import {
   returnTask as returnTaskInDatabase,
   updateTask as updateTaskInDatabase,
 } from "../services/tasks";
-import type { Status, Task } from "../types/task";
+import type {
+  Status,
+  Task,
+} from "../types/task";
 
 export default function useTasks() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(
-    null,
-  );
+  const { user, profile } = useAuth();
 
-  const [isCreateModalOpen, setIsCreateModalOpen] =
-    useState(false);
+  const [tasks, setTasks] = useState<
+    Task[]
+  >([]);
 
-  const [isLoadingTasks, setIsLoadingTasks] =
-    useState(true);
+  const [
+    selectedTask,
+    setSelectedTask,
+  ] = useState<Task | null>(null);
 
-  const [isSavingTask, setIsSavingTask] =
-    useState(false);
+  const [
+    isCreateModalOpen,
+    setIsCreateModalOpen,
+  ] = useState(false);
 
-  const [errorMessage, setErrorMessage] = useState<
-    string | null
-  >(null);
+  const [
+    isLoadingTasks,
+    setIsLoadingTasks,
+  ] = useState(true);
 
-  const canReview = true;
+  const [
+    isSavingTask,
+    setIsSavingTask,
+  ] = useState(false);
 
-  useEffect(() => {
-    let mounted = true;
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState<string | null>(null);
 
-    async function loadTasks() {
+  const canReview =
+    profile?.role === "supervisor";
+
+  const loadTasks = useCallback(
+    async () => {
+      if (!user) {
+        setTasks([]);
+        setIsLoadingTasks(false);
+        return;
+      }
+
       try {
         setIsLoadingTasks(true);
+        setErrorMessage(null);
 
         const data = await getTasks();
 
-        if (mounted) {
+        setTasks(data);
+      } catch (error) {
+        setErrorMessage(
+          getErrorMessage(error),
+        );
+      } finally {
+        setIsLoadingTasks(false);
+      }
+    },
+    [user],
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function initializeTasks() {
+      if (!user) {
+        if (isMounted) {
+          setTasks([]);
+          setIsLoadingTasks(false);
+        }
+
+        return;
+      }
+
+      try {
+        if (isMounted) {
+          setIsLoadingTasks(true);
+          setErrorMessage(null);
+        }
+
+        const data = await getTasks();
+
+        if (isMounted) {
           setTasks(data);
         }
       } catch (error) {
-        if (mounted) {
-          setErrorMessage(getErrorMessage(error));
+        if (isMounted) {
+          setErrorMessage(
+            getErrorMessage(error),
+          );
         }
       } finally {
-        if (mounted) {
+        if (isMounted) {
           setIsLoadingTasks(false);
         }
       }
     }
 
-    void loadTasks();
+    void initializeTasks();
 
     return () => {
-      mounted = false;
+      isMounted = false;
     };
-  }, []);
+  }, [user]);
 
-  async function handleCreateTask(newTask: Task) {
+  async function handleCreateTask(
+    newTask: Task,
+  ) {
     if (isSavingTask) {
       return;
     }
 
     setIsSavingTask(true);
+    setErrorMessage(null);
+
     try {
       const createdTask =
-        await createTaskInDatabase(newTask);
+        await createTaskInDatabase(
+          newTask,
+        );
 
-      setTasks((current) => [...current, createdTask]);
+      setTasks((currentTasks) => [
+        ...currentTasks,
+        createdTask,
+      ]);
 
       setIsCreateModalOpen(false);
     } catch (error) {
-      setErrorMessage(getErrorMessage(error));
+      setErrorMessage(
+        getErrorMessage(error),
+      );
     } finally {
       setIsSavingTask(false);
     }
@@ -89,16 +162,20 @@ export default function useTasks() {
     }
 
     setIsSavingTask(true);
+    setErrorMessage(null);
 
     try {
-      const movedTask = await moveTaskInDatabase(
-        taskId,
-        newStatus,
-      );
+      const movedTask =
+        await moveTaskInDatabase(
+          taskId,
+          newStatus,
+        );
 
       replaceTask(movedTask);
     } catch (error) {
-      setErrorMessage(getErrorMessage(error));
+      setErrorMessage(
+        getErrorMessage(error),
+      );
     } finally {
       setIsSavingTask(false);
     }
@@ -108,95 +185,107 @@ export default function useTasks() {
     taskId: string,
     managerMessage: string,
   ) {
-    if (isSavingTask) {
+    if (isSavingTask || !canReview) {
       return;
     }
 
     setIsSavingTask(true);
+    setErrorMessage(null);
 
     try {
-      const task = await returnTaskInDatabase(
-        taskId,
-        managerMessage,
-      );
+      const returnedTask =
+        await returnTaskInDatabase(
+          taskId,
+          managerMessage,
+        );
 
-      replaceTask(task);
+      replaceTask(returnedTask);
     } catch (error) {
-      setErrorMessage(getErrorMessage(error));
+      setErrorMessage(
+        getErrorMessage(error),
+      );
     } finally {
       setIsSavingTask(false);
     }
   }
 
-  async function handleUpdateTask(updatedTask: Task) {
+  async function handleUpdateTask(
+    updatedTask: Task,
+  ) {
     if (isSavingTask) {
       return;
     }
 
     setIsSavingTask(true);
+    setErrorMessage(null);
 
     try {
       const savedTask =
-        await updateTaskInDatabase(updatedTask);
+        await updateTaskInDatabase(
+          updatedTask,
+        );
 
       replaceTask(savedTask);
     } catch (error) {
-      setErrorMessage(getErrorMessage(error));
+      setErrorMessage(
+        getErrorMessage(error),
+      );
     } finally {
       setIsSavingTask(false);
     }
   }
 
-  async function handleDeleteTask(taskId: string) {
+  async function handleDeleteTask(
+    taskId: string,
+  ) {
     if (isSavingTask) {
       return;
     }
 
     setIsSavingTask(true);
+    setErrorMessage(null);
 
     try {
-      await deleteTaskFromDatabase(taskId);
+      await deleteTaskFromDatabase(
+        taskId,
+      );
 
-      setTasks((current) =>
-        current.filter((task) => task.id !== taskId),
+      setTasks((currentTasks) =>
+        currentTasks.filter(
+          (task) => task.id !== taskId,
+        ),
       );
 
       setSelectedTask(null);
     } catch (error) {
-      setErrorMessage(getErrorMessage(error));
+      setErrorMessage(
+        getErrorMessage(error),
+      );
     } finally {
       setIsSavingTask(false);
     }
   }
 
-  function replaceTask(updatedTask: Task) {
-    setTasks((current) =>
-      current.map((task) =>
+  function replaceTask(
+    updatedTask: Task,
+  ) {
+    setTasks((currentTasks) =>
+      currentTasks.map((task) =>
         task.id === updatedTask.id
           ? updatedTask
           : task,
       ),
     );
 
-    setSelectedTask((current) =>
-      current?.id === updatedTask.id
+    setSelectedTask((currentTask) =>
+      currentTask?.id === updatedTask.id
         ? updatedTask
-        : current,
+        : currentTask,
     );
   }
 
   async function retryLoadingTasks() {
-    try {
-      setIsLoadingTasks(true);
-
-      const data = await getTasks();
-
-      setTasks(data);
-    } catch (error) {
-      setErrorMessage(getErrorMessage(error));
-    } finally {
-      setIsLoadingTasks(false);
-    }
+    await loadTasks();
   }
 
   return {
@@ -220,7 +309,9 @@ export default function useTasks() {
   };
 }
 
-function getErrorMessage(error: unknown) {
+function getErrorMessage(
+  error: unknown,
+) {
   if (error instanceof Error) {
     return error.message;
   }

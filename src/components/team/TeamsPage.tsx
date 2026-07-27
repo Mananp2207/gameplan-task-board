@@ -13,6 +13,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import {
   createTeam,
@@ -33,31 +34,27 @@ type TeamsPageProps = {
 export default function TeamsPage({
   isDarkMode,
 }: TeamsPageProps) {
+  const navigate = useNavigate();
   const { profile } = useAuth();
 
-  const [teams, setTeams] = useState<
-    Team[]
-  >([]);
+  const [teams, setTeams] =
+    useState<Team[]>([]);
 
   const [
     availableProfiles,
     setAvailableProfiles,
   ] = useState<TeamMemberProfile[]>([]);
 
-  const [
-    isLoading,
-    setIsLoading,
-  ] = useState(true);
+  const [isLoading, setIsLoading] =
+    useState(true);
 
   const [
     isCreateModalOpen,
     setIsCreateModalOpen,
   ] = useState(false);
 
-  const [
-    isSaving,
-    setIsSaving,
-  ] = useState(false);
+  const [isSaving, setIsSaving] =
+    useState(false);
 
   const [
     errorMessage,
@@ -194,8 +191,8 @@ export default function TeamsPage({
             }`}
           >
             Organize members, assign work,
-            and keep team collaboration in
-            one shared workspace.
+            and keep team collaboration in one
+            shared workspace.
           </p>
         </div>
 
@@ -243,6 +240,11 @@ export default function TeamsPage({
                 team.createdBy ===
                   profile?.id
               }
+              onOpen={() =>
+                navigate(
+                  `/teams/${team.id}`,
+                )
+              }
               onDelete={() =>
                 void handleDeleteTeam(
                   team.id,
@@ -273,6 +275,7 @@ type TeamCardProps = {
   team: Team;
   isDarkMode: boolean;
   canDelete: boolean;
+  onOpen: () => void;
   onDelete: () => void;
 };
 
@@ -280,11 +283,24 @@ function TeamCard({
   team,
   isDarkMode,
   canDelete,
+  onOpen,
   onDelete,
 }: TeamCardProps) {
   return (
     <article
-      className={`rounded-3xl border p-6 shadow-sm ${
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(event) => {
+        if (
+          event.key === "Enter" ||
+          event.key === " "
+        ) {
+          event.preventDefault();
+          onOpen();
+        }
+      }}
+      className={`cursor-pointer rounded-3xl border p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg ${
         isDarkMode
           ? "border-slate-800 bg-slate-900"
           : "border-slate-200 bg-white"
@@ -323,7 +339,10 @@ function TeamCard({
         {canDelete && (
           <button
             type="button"
-            onClick={onDelete}
+            onClick={(event) => {
+              event.stopPropagation();
+              onDelete();
+            }}
             aria-label={`Delete ${team.name}`}
             className={`rounded-xl p-2 transition ${
               isDarkMode
@@ -392,13 +411,7 @@ function TeamCard({
         }`}
       >
         {team.members.length === 0 ? (
-          <p
-            className={`text-sm ${
-              isDarkMode
-                ? "text-slate-500"
-                : "text-slate-500"
-            }`}
-          >
+          <p className="text-sm text-slate-500">
             No members have been added.
           </p>
         ) : (
@@ -435,13 +448,13 @@ function TeamCard({
 
                 <span
                   className={`rounded-full px-3 py-1 text-xs font-bold ${
-                    member.profile.role ===
+                    member.role ===
                     "supervisor"
                       ? "bg-blue-100 text-blue-700"
                       : "bg-slate-100 text-slate-600"
                   }`}
                 >
-                  {member.profile.role ===
+                  {member.role ===
                   "supervisor"
                     ? "Supervisor"
                     : "Member"}
@@ -596,7 +609,9 @@ function CreateTeamModal({
   onClose,
   onSubmit,
 }: CreateTeamModalProps) {
-  const [name, setName] = useState("");
+  const [name, setName] =
+    useState("");
+
   const [
     description,
     setDescription,
@@ -685,8 +700,8 @@ function CreateTeamModal({
                   : "text-slate-500"
               }`}
             >
-              Add existing GamePlan users
-              to your new team.
+              Add existing GamePlan users to
+              your new team.
             </p>
           </div>
 

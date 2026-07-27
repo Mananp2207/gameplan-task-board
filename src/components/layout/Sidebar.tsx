@@ -10,6 +10,7 @@ import {
   Settings,
   ShieldCheck,
   UserRound,
+  Users,
 } from "lucide-react";
 import {
   NavLink,
@@ -23,6 +24,11 @@ const topMenu = [
     title: "Dashboard",
     icon: LayoutDashboard,
     path: "/",
+  },
+  {
+    title: "Teams",
+    icon: Users,
+    path: "/teams",
   },
   {
     title: "To Do",
@@ -74,6 +80,7 @@ function getLinkClass(isActive: boolean) {
 
 export default function Sidebar() {
   const navigate = useNavigate();
+
   const {
     profile,
     user,

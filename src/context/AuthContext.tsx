@@ -11,7 +11,9 @@ import type {
 } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 
-export type UserRole = "member" | "supervisor";
+export type UserRole =
+  | "member"
+  | "supervisor";
 
 export type UserProfile = {
   id: string;
@@ -22,21 +24,33 @@ export type UserProfile = {
   updatedAt: string;
 };
 
+type AuthResult = {
+  error: string | null;
+};
+
 type AuthContextValue = {
   session: Session | null;
   user: User | null;
   profile: UserProfile | null;
+  isAnonymous: boolean;
   isLoadingAuth: boolean;
+  authError: string | null;
+
   signUp: (
     fullName: string,
     email: string,
     password: string,
-  ) => Promise<{ error: string | null }>;
+  ) => Promise<AuthResult>;
+
   signIn: (
     email: string,
     password: string,
-  ) => Promise<{ error: string | null }>;
-  signOut: () => Promise<{ error: string | null }>;
+  ) => Promise<AuthResult>;
+
+  signOut: () => Promise<AuthResult>;
+
+  continueAsGuest: () => Promise<AuthResult>;
+
   refreshProfile: () => Promise<void>;
 };
 
@@ -50,7 +64,9 @@ type ProfileRow = {
 };
 
 const AuthContext =
-  createContext<AuthContextValue | null>(null);
+  createContext<AuthContextValue | null>(
+    null,
+  );
 
 type AuthProviderProps = {
   children: ReactNode;
@@ -69,6 +85,12 @@ function mapProfile(
   };
 }
 
+function isAnonymousUser(
+  user: User | null | undefined,
+) {
+  return user?.is_anonymous === true;
+}
+
 export function AuthProvider({
   children,
 }: AuthProviderProps) {
@@ -78,10 +100,17 @@ export function AuthProvider({
   const [profile, setProfile] =
     useState<UserProfile | null>(null);
 
-  const [isLoadingAuth, setIsLoadingAuth] =
-    useState(true);
+  const [
+    isLoadingAuth,
+    setIsLoadingAuth,
+  ] = useState(true);
 
-  async function loadProfile(userId: string) {
+  const [authError, setAuthError] =
+    useState<string | null>(null);
+
+  async function loadProfile(
+    userId: string,
+  ) {
     const { data, error } = await supabase
       .from("profiles")
       .select(
@@ -95,7 +124,7 @@ export function AuthProvider({
         `,
       )
       .eq("id", userId)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error(
@@ -107,48 +136,145 @@ export function AuthProvider({
       return;
     }
 
-    setProfile(mapProfile(data as ProfileRow));
-  }
-
-  async function refreshProfile() {
-    if (!session?.user.id) {
+    if (!data) {
       setProfile(null);
       return;
     }
 
-    await loadProfile(session.user.id);
+    setProfile(
+      mapProfile(data as ProfileRow),
+    );
+  }
+
+  async function applySession(
+    nextSession: Session | null,
+  ) {
+    setSession(nextSession);
+
+    const nextUser =
+      nextSession?.user ?? null;
+
+    if (!nextUser) {
+      setProfile(null);
+      return;
+    }
+
+    if (isAnonymousUser(nextUser)) {
+      setProfile(null);
+      return;
+    }
+
+    await loadProfile(nextUser.id);
+  }
+
+  async function createGuestSession(): Promise<AuthResult> {
+    setAuthError(null);
+
+    const {
+      data,
+      error,
+    } =
+      await supabase.auth.signInAnonymously();
+
+    if (error) {
+      const message =
+        `Unable to create a guest session: ${error.message}`;
+
+      setAuthError(message);
+
+      return {
+        error: message,
+      };
+    }
+
+    await applySession(data.session);
+
+    return {
+      error: null,
+    };
+  }
+
+  async function refreshProfile() {
+    const currentUser =
+      session?.user ?? null;
+
+    if (
+      !currentUser ||
+      isAnonymousUser(currentUser)
+    ) {
+      setProfile(null);
+      return;
+    }
+
+    await loadProfile(currentUser.id);
   }
 
   useEffect(() => {
     let isMounted = true;
 
     async function initializeAuth() {
-      const {
-        data: { session: currentSession },
-        error,
-      } = await supabase.auth.getSession();
+      try {
+        setIsLoadingAuth(true);
+        setAuthError(null);
 
-      if (!isMounted) {
-        return;
-      }
+        const {
+          data: {
+            session: currentSession,
+          },
+          error,
+        } =
+          await supabase.auth.getSession();
 
-      if (error) {
-        console.error(
-          "Unable to restore session:",
-          error.message,
-        );
-      }
+        if (!isMounted) {
+          return;
+        }
 
-      setSession(currentSession);
+        if (error) {
+          throw new Error(
+            `Unable to restore the current session: ${error.message}`,
+          );
+        }
 
-      if (currentSession?.user.id) {
-        await loadProfile(
-          currentSession.user.id,
-        );
-      }
+        if (currentSession) {
+          await applySession(
+            currentSession,
+          );
+          return;
+        }
 
-      if (isMounted) {
-        setIsLoadingAuth(false);
+        const {
+          data,
+          error: guestError,
+        } =
+          await supabase.auth.signInAnonymously();
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (guestError) {
+          throw new Error(
+            `Unable to create a guest session: ${guestError.message}`,
+          );
+        }
+
+        await applySession(data.session);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        const message =
+          getErrorMessage(error);
+
+        console.error(message);
+        setAuthError(message);
+        setSession(null);
+        setProfile(null);
+      } finally {
+        if (isMounted) {
+          setIsLoadingAuth(false);
+        }
       }
     }
 
@@ -156,23 +282,28 @@ export function AuthProvider({
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(
-      (_event, nextSession) => {
-        setSession(nextSession);
+    } =
+      supabase.auth.onAuthStateChange(
+        (_event, nextSession) => {
+          if (!isMounted) {
+            return;
+          }
 
-        if (nextSession?.user.id) {
           window.setTimeout(() => {
-            void loadProfile(
-              nextSession.user.id,
-            );
-          }, 0);
-        } else {
-          setProfile(null);
-        }
+            if (!isMounted) {
+              return;
+            }
 
-        setIsLoadingAuth(false);
-      },
-    );
+            void applySession(
+              nextSession,
+            ).finally(() => {
+              if (isMounted) {
+                setIsLoadingAuth(false);
+              }
+            });
+          }, 0);
+        },
+      );
 
     return () => {
       isMounted = false;
@@ -184,72 +315,130 @@ export function AuthProvider({
     fullName: string,
     email: string,
     password: string,
-  ) {
+  ): Promise<AuthResult> {
+    setAuthError(null);
+
     const { error } =
       await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
           data: {
-            full_name: fullName.trim(),
+            full_name:
+              fullName.trim(),
           },
         },
       });
 
+    const message =
+      error?.message ?? null;
+
+    setAuthError(message);
+
     return {
-      error: error?.message ?? null,
+      error: message,
     };
   }
 
   async function signIn(
     email: string,
     password: string,
-  ) {
+  ): Promise<AuthResult> {
+    setAuthError(null);
+
     const { error } =
-      await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      });
+      await supabase.auth
+        .signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+
+    const message =
+      error?.message ?? null;
+
+    setAuthError(message);
 
     return {
-      error: error?.message ?? null,
+      error: message,
     };
   }
 
-  async function signOut() {
+  async function signOut(): Promise<AuthResult> {
+    setAuthError(null);
+
     const { error } =
       await supabase.auth.signOut();
 
-    if (!error) {
-      setSession(null);
-      setProfile(null);
+    if (error) {
+      setAuthError(error.message);
+
+      return {
+        error: error.message,
+      };
     }
 
+    setSession(null);
+    setProfile(null);
+
     return {
-      error: error?.message ?? null,
+      error: null,
     };
   }
 
+  async function continueAsGuest(): Promise<AuthResult> {
+    if (
+      session?.user &&
+      isAnonymousUser(session.user)
+    ) {
+      return {
+        error: null,
+      };
+    }
+
+    if (session) {
+      const { error } =
+        await supabase.auth.signOut();
+
+      if (error) {
+        return {
+          error: error.message,
+        };
+      }
+    }
+
+    return createGuestSession();
+  }
+
+  const currentUser =
+    session?.user ?? null;
+
   const value: AuthContextValue = {
     session,
-    user: session?.user ?? null,
+    user: currentUser,
     profile,
+    isAnonymous:
+      isAnonymousUser(currentUser),
     isLoadingAuth,
+    authError,
     signUp,
     signIn,
     signOut,
+    continueAsGuest,
     refreshProfile,
   };
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider
+      value={value}
+    >
       {children}
     </AuthContext.Provider>
   );
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext);
+  const context =
+    useContext(AuthContext);
 
   if (!context) {
     throw new Error(
@@ -258,4 +447,14 @@ export function useAuth() {
   }
 
   return context;
+}
+
+function getErrorMessage(
+  error: unknown,
+) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return "Something went wrong while loading authentication.";
 }

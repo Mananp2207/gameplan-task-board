@@ -1,4 +1,7 @@
-import { Navigate, useParams } from "react-router-dom";
+import {
+  Navigate,
+  useParams,
+} from "react-router-dom";
 import Column from "../components/board/Column";
 import CreateTaskModal from "../components/tasks/CreateTaskModal";
 import TaskDetailsModal from "../components/tasks/TaskDetailsModal";
@@ -16,18 +19,28 @@ type TaskStatusPageProps = {
   isSavingTask: boolean;
   isDarkMode: boolean;
   canReview: boolean;
-  onSelectTask: (task: Task | null) => void;
+
+  onSelectTask: (
+    task: Task | null,
+  ) => void;
+
   onOpenCreateModal: () => void;
   onCloseCreateModal: () => void;
-  onCreateTask: (task: Task) => void;
+
+  onCreateTask: (
+    task: Task,
+  ) => Promise<void>;
+
   onMoveTask: (
     taskId: string,
     status: Status,
   ) => void;
+
   onReturnTask: (
     taskId: string,
     message: string,
   ) => void;
+
   onUpdateTask: (task: Task) => void;
   onDeleteTask: (taskId: string) => void;
 };
@@ -66,7 +79,9 @@ const statusInformation: Record<
   },
 };
 
-function isValidStatus(value: string): value is Status {
+function isValidStatus(
+  value: string,
+): value is Status {
   return (
     value === "todo" ||
     value === "inprogress" ||
@@ -79,29 +94,45 @@ function getDeadlineColors(
   tasks: Task[],
 ): Record<string, DeadlineColor> {
   const activeTasks = tasks
-    .filter((task) => task.status !== "done")
+    .filter(
+      (task) => task.status !== "done",
+    )
     .sort(
       (firstTask, secondTask) =>
-        new Date(firstTask.dueDate).getTime() -
-        new Date(secondTask.dueDate).getTime(),
+        new Date(
+          firstTask.dueDate,
+        ).getTime() -
+        new Date(
+          secondTask.dueDate,
+        ).getTime(),
     );
 
-  const colors: Record<string, DeadlineColor> = {};
+  const colors: Record<
+    string,
+    DeadlineColor
+  > = {};
 
   if (activeTasks.length === 1) {
-    colors[activeTasks[0].id] = "yellow";
+    colors[activeTasks[0].id] =
+      "yellow";
+
     return colors;
   }
 
-  activeTasks.forEach((task, index) => {
-    if (index === 0) {
-      colors[task.id] = "orange";
-    } else if (index === activeTasks.length - 1) {
-      colors[task.id] = "green";
-    } else {
-      colors[task.id] = "yellow";
-    }
-  });
+  activeTasks.forEach(
+    (task, index) => {
+      if (index === 0) {
+        colors[task.id] = "orange";
+      } else if (
+        index ===
+        activeTasks.length - 1
+      ) {
+        colors[task.id] = "green";
+      } else {
+        colors[task.id] = "yellow";
+      }
+    },
+  );
 
   return colors;
 }
@@ -123,13 +154,20 @@ export default function TaskStatusPage({
   onUpdateTask,
   onDeleteTask,
 }: TaskStatusPageProps) {
-  const { status = "" } = useParams();
+  const { status = "" } =
+    useParams();
 
   if (!isValidStatus(status)) {
-    return <Navigate to="/tasks/todo" replace />;
+    return (
+      <Navigate
+        to="/tasks/todo"
+        replace
+      />
+    );
   }
 
-  const pageInformation = statusInformation[status];
+  const pageInformation =
+    statusInformation[status];
 
   const statusTasks = tasks.filter(
     (task) => task.status === status,
@@ -161,8 +199,13 @@ export default function TaskStatusPage({
                     : "text-slate-900"
                 }`}
               >
-                <span>{pageInformation.icon}</span>
-                <span>{pageInformation.title}</span>
+                <span>
+                  {pageInformation.icon}
+                </span>
+
+                <span>
+                  {pageInformation.title}
+                </span>
               </h1>
 
               <p
@@ -172,7 +215,9 @@ export default function TaskStatusPage({
                     : "text-slate-600"
                 }`}
               >
-                {pageInformation.description}
+                {
+                  pageInformation.description
+                }
               </p>
 
               <p
@@ -189,18 +234,21 @@ export default function TaskStatusPage({
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={onOpenCreateModal}
-              disabled={
-                isLoadingTasks || isSavingTask
-              }
-              className="rounded-2xl bg-blue-600 px-6 py-3 font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isSavingTask
-                ? "Saving..."
-                : "+ Create Task"}
-            </button>
+            {canReview && (
+              <button
+                type="button"
+                onClick={onOpenCreateModal}
+                disabled={
+                  isLoadingTasks ||
+                  isSavingTask
+                }
+                className="rounded-2xl bg-blue-600 px-6 py-3 font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSavingTask
+                  ? "Saving..."
+                  : "+ Create Task"}
+              </button>
+            )}
           </div>
         </section>
 
@@ -229,7 +277,9 @@ export default function TaskStatusPage({
             title={pageInformation.title}
             status={status}
             tasks={statusTasks}
-            deadlineColors={deadlineColors}
+            deadlineColors={
+              deadlineColors
+            }
             onSelectTask={onSelectTask}
           />
         )}
@@ -237,6 +287,8 @@ export default function TaskStatusPage({
 
       <CreateTaskModal
         isOpen={isCreateModalOpen}
+        isDarkMode={isDarkMode}
+        isSaving={isSavingTask}
         onClose={onCloseCreateModal}
         onCreateTask={onCreateTask}
       />
@@ -244,7 +296,9 @@ export default function TaskStatusPage({
       <TaskDetailsModal
         task={selectedTask}
         canReview={canReview}
-        onClose={() => onSelectTask(null)}
+        onClose={() =>
+          onSelectTask(null)
+        }
         onMoveTask={onMoveTask}
         onReturnTask={onReturnTask}
         onUpdateTask={onUpdateTask}

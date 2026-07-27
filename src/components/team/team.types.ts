@@ -13,6 +13,10 @@ export type TeamMemberProfile = {
 export type TeamMember = {
   teamId: string;
   userId: string;
+
+  // This is the user’s role inside this specific team.
+  role: TeamUserRole;
+
   joinedAt: string;
   profile: TeamMemberProfile;
 };
@@ -31,4 +35,16 @@ export type CreateTeamInput = {
   name: string;
   description: string;
   memberIds: string[];
+};
+
+export type AddTeamMemberInput = {
+  teamId: string;
+  userId: string;
+  role: TeamUserRole;
+};
+
+export type UpdateTeamMemberRoleInput = {
+  teamId: string;
+  userId: string;
+  role: TeamUserRole;
 };

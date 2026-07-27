@@ -18,9 +18,14 @@ type TaskRow = {
   is_urgent: boolean;
   status: DatabaseTaskStatus;
   manager_message: string | null;
+
+  user_id: string;
+
+  team_id: string | null;
   assigned_to: string | null;
   assigned_by: string | null;
   created_by: string;
+
   created_at: string;
   updated_at: string;
 };
@@ -32,6 +37,10 @@ type TaskInsert = {
   is_urgent: boolean;
   status: DatabaseTaskStatus;
   manager_message: string | null;
+
+  user_id: string;
+
+  team_id: string | null;
   assigned_to: string;
   assigned_by: string;
   created_by: string;
@@ -44,6 +53,8 @@ type TaskUpdate = {
   is_urgent: boolean;
   status: DatabaseTaskStatus;
   manager_message: string | null;
+  team_id: string | null;
+  assigned_to: string | null;
 };
 
 const TASK_COLUMNS = `
@@ -54,6 +65,8 @@ const TASK_COLUMNS = `
   is_urgent,
   status,
   manager_message,
+  user_id,
+  team_id,
   assigned_to,
   assigned_by,
   created_by,
@@ -107,9 +120,14 @@ function convertTaskRowToTask(
     ),
     managerMessage:
       row.manager_message ?? undefined,
+
+    userId: row.user_id,
+
+    teamId: row.team_id,
     assignedTo: row.assigned_to,
     assignedBy: row.assigned_by,
     createdBy: row.created_by,
+
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -128,6 +146,9 @@ function convertTaskToUpdateValues(
     ),
     manager_message:
       task.managerMessage?.trim() || null,
+    team_id: task.teamId ?? null,
+    assigned_to:
+      task.assignedTo ?? null,
   };
 }
 
@@ -145,7 +166,7 @@ async function getCurrentUserId(): Promise<string> {
 
   if (!user) {
     throw new Error(
-      "You must be signed in to manage tasks.",
+      "A valid guest or permanent session is required to manage tasks.",
     );
   }
 
@@ -155,6 +176,13 @@ async function getCurrentUserId(): Promise<string> {
 export async function getTasks(): Promise<
   Task[]
 > {
+  await getCurrentUserId();
+
+  /*
+   * Do not filter here by user_id.
+   * Supabase RLS decides whether the current
+   * user is the owner or assigned member.
+   */
   const { data, error } = await supabase
     .from("tasks")
     .select(TASK_COLUMNS)
@@ -180,6 +208,42 @@ export async function getTasks(): Promise<
   );
 }
 
+export async function getTasksByTeamId(
+  teamId: string,
+): Promise<Task[]> {
+  await getCurrentUserId();
+
+  /*
+   * Do not filter by user_id here either.
+   * An assignee may not own the task, but
+   * RLS should still allow them to read it.
+   */
+  const { data, error } = await supabase
+    .from("tasks")
+    .select(TASK_COLUMNS)
+    .eq("team_id", teamId)
+    .order("is_urgent", {
+      ascending: false,
+    })
+    .order("due_date", {
+      ascending: true,
+      nullsFirst: false,
+    })
+    .order("created_at", {
+      ascending: true,
+    });
+
+  if (error) {
+    throw new Error(
+      `Unable to load team tasks: ${error.message}`,
+    );
+  }
+
+  return ((data ?? []) as TaskRow[]).map(
+    convertTaskRowToTask,
+  );
+}
+
 export async function createTask(
   task: Task,
 ): Promise<Task> {
@@ -197,10 +261,13 @@ export async function createTask(
     manager_message:
       task.managerMessage?.trim() || null,
 
-    // Until the member-assignment interface is added,
-    // newly created tasks are assigned to their creator.
+    user_id: currentUserId,
+
+    team_id: task.teamId ?? null,
+
     assigned_to:
       task.assignedTo ?? currentUserId,
+
     assigned_by: currentUserId,
     created_by: currentUserId,
   };
@@ -225,9 +292,16 @@ export async function createTask(
 export async function updateTask(
   task: Task,
 ): Promise<Task> {
+  await getCurrentUserId();
+
   const values =
     convertTaskToUpdateValues(task);
 
+  /*
+   * The query only targets the task ID.
+   * RLS determines whether the current user
+   * is allowed to update it as owner or assignee.
+   */
   const { data, error } = await supabase
     .from("tasks")
     .update(values)
@@ -250,6 +324,8 @@ export async function moveTask(
   taskId: string,
   newStatus: Status,
 ): Promise<Task> {
+  await getCurrentUserId();
+
   const valuesToUpdate: {
     status: DatabaseTaskStatus;
     manager_message?: null;
@@ -265,6 +341,11 @@ export async function moveTask(
     valuesToUpdate.manager_message = null;
   }
 
+  /*
+   * Do not add .eq("user_id", currentUserId).
+   * The assigned member is not the owner.
+   * RLS decides whether the update is allowed.
+   */
   const { data, error } = await supabase
     .from("tasks")
     .update(valuesToUpdate)
@@ -287,6 +368,9 @@ export async function returnTask(
   taskId: string,
   managerMessage: string,
 ): Promise<Task> {
+  const currentUserId =
+    await getCurrentUserId();
+
   const cleanedMessage =
     managerMessage.trim();
 
@@ -296,6 +380,10 @@ export async function returnTask(
     );
   }
 
+  /*
+   * Only the task owner/supervisor can return
+   * the task, so this keeps the user_id check.
+   */
   const { data, error } = await supabase
     .from("tasks")
     .update({
@@ -304,6 +392,7 @@ export async function returnTask(
       manager_message: cleanedMessage,
     })
     .eq("id", taskId)
+    .eq("user_id", currentUserId)
     .select(TASK_COLUMNS)
     .single();
 
@@ -321,10 +410,18 @@ export async function returnTask(
 export async function deleteTask(
   taskId: string,
 ): Promise<void> {
+  const currentUserId =
+    await getCurrentUserId();
+
+  /*
+   * Only the owner/supervisor can delete.
+   * An assigned member will not match user_id.
+   */
   const { error } = await supabase
     .from("tasks")
     .delete()
-    .eq("id", taskId);
+    .eq("id", taskId)
+    .eq("user_id", currentUserId);
 
   if (error) {
     throw new Error(

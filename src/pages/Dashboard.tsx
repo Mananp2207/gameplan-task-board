@@ -2,7 +2,10 @@ import Board from "../components/board/Board";
 import DashboardStats from "../components/dashboard/DashboardStats";
 import CreateTaskModal from "../components/tasks/CreateTaskModal";
 import TaskDetailsModal from "../components/tasks/TaskDetailsModal";
-import type { Status, Task } from "../types/task";
+import type {
+  Status,
+  Task,
+} from "../types/task";
 
 type DashboardProps = {
   tasks: Task[];
@@ -22,15 +25,20 @@ type DashboardProps = {
   onOpenCreateModal: () => void;
   onCloseCreateModal: () => void;
 
-  onCreateTask: (task: Task) => void;
+  onCreateTask: (
+    task: Task,
+  ) => Promise<void>;
+
   onMoveTask: (
     taskId: string,
     status: Status,
   ) => void;
+
   onReturnTask: (
     taskId: string,
     message: string,
   ) => void;
+
   onUpdateTask: (task: Task) => void;
   onDeleteTask: (taskId: string) => void;
 };
@@ -95,21 +103,25 @@ export default function Dashboard({
               }`}
             >
               Manage your sports operations,
-              prioritize urgent work, and keep every
-              task moving from To Do all the way to
-              Done.
+              prioritize urgent work, and keep
+              every task moving from To Do all
+              the way to Done.
             </p>
           </div>
 
-          <button
-            onClick={onOpenCreateModal}
-            disabled={
-              isLoadingTasks || isSavingTask
-            }
-            className="rounded-2xl bg-blue-600 px-8 py-4 text-lg font-bold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:bg-blue-700 disabled:opacity-50"
-          >
-            + Create New Task
-          </button>
+          {canReview && (
+            <button
+              type="button"
+              onClick={onOpenCreateModal}
+              disabled={
+                isLoadingTasks ||
+                isSavingTask
+              }
+              className="rounded-2xl bg-blue-600 px-8 py-4 text-lg font-bold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              + Create New Task
+            </button>
+          )}
         </div>
       </section>
 
@@ -155,8 +167,11 @@ export default function Dashboard({
           />
         )}
       </section>
-            <CreateTaskModal
+
+      <CreateTaskModal
         isOpen={isCreateModalOpen}
+        isDarkMode={isDarkMode}
+        isSaving={isSavingTask}
         onClose={onCloseCreateModal}
         onCreateTask={onCreateTask}
       />
@@ -164,7 +179,9 @@ export default function Dashboard({
       <TaskDetailsModal
         task={selectedTask}
         canReview={canReview}
-        onClose={() => onSelectTask(null)}
+        onClose={() =>
+          onSelectTask(null)
+        }
         onMoveTask={onMoveTask}
         onReturnTask={onReturnTask}
         onUpdateTask={onUpdateTask}

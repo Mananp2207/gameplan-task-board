@@ -7,6 +7,8 @@ import {
 } from "react-router-dom";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Layout from "./components/layout/Layout";
+import TeamDetailsPage from "./components/team/TeamDetailsPage";
+import TeamsPage from "./components/team/TeamsPage";
 import useTasks from "./hooks/useTasks";
 import Dashboard from "./pages/Dashboard";
 import LoginPage from "./pages/LoginPage";
@@ -65,9 +67,10 @@ function GamePlanApplication() {
 
   const [isDarkMode, setIsDarkMode] =
     useState(() => {
-      const savedTheme = localStorage.getItem(
-        THEME_STORAGE_KEY,
-      );
+      const savedTheme =
+        localStorage.getItem(
+          THEME_STORAGE_KEY,
+        );
 
       if (savedTheme === "dark") {
         return true;
@@ -100,7 +103,8 @@ function GamePlanApplication() {
         document.activeElement;
 
       const isTyping =
-        activeElement instanceof HTMLInputElement ||
+        activeElement instanceof
+          HTMLInputElement ||
         activeElement instanceof
           HTMLTextAreaElement ||
         activeElement instanceof
@@ -116,9 +120,12 @@ function GamePlanApplication() {
         return;
       }
 
-      if (event.key.toLowerCase() === "d") {
+      if (
+        event.key.toLowerCase() === "d"
+      ) {
         setIsDarkMode(
-          (currentMode) => !currentMode,
+          (currentMode) =>
+            !currentMode,
         );
       }
 
@@ -174,13 +181,16 @@ function GamePlanApplication() {
     },
   );
 
-  const todoTasks = filteredTasks.filter(
-    (task) => task.status === "todo",
-  ).length;
+  const todoTasks =
+    filteredTasks.filter(
+      (task) =>
+        task.status === "todo",
+    ).length;
 
-  const urgentTasks = filteredTasks.filter(
-    (task) => task.isUrgent,
-  ).length;
+  const urgentTasks =
+    filteredTasks.filter(
+      (task) => task.isUrgent,
+    ).length;
 
   const inProgressTasks =
     filteredTasks.filter(
@@ -190,7 +200,8 @@ function GamePlanApplication() {
 
   const completedTasks =
     filteredTasks.filter(
-      (task) => task.status === "done",
+      (task) =>
+        task.status === "done",
     ).length;
 
   return (
@@ -198,7 +209,8 @@ function GamePlanApplication() {
       isDarkMode={isDarkMode}
       onToggleTheme={() =>
         setIsDarkMode(
-          (currentMode) => !currentMode,
+          (currentMode) =>
+            !currentMode,
         )
       }
       searchQuery={searchQuery}
@@ -216,16 +228,40 @@ function GamePlanApplication() {
         />
 
         <Route
+          path="/teams"
+          element={
+            <TeamsPage
+              isDarkMode={isDarkMode}
+            />
+          }
+        />
+
+        <Route
+          path="/teams/:teamId"
+          element={
+            <TeamDetailsPage
+              isDarkMode={isDarkMode}
+            />
+          }
+        />
+
+        <Route
           path="/tasks"
           element={
             <Dashboard
               tasks={filteredTasks}
-              selectedTask={selectedTask}
+              selectedTask={
+                selectedTask
+              }
               isCreateModalOpen={
                 isCreateModalOpen
               }
-              isLoadingTasks={isLoadingTasks}
-              isSavingTask={isSavingTask}
+              isLoadingTasks={
+                isLoadingTasks
+              }
+              isSavingTask={
+                isSavingTask
+              }
               isDarkMode={isDarkMode}
               canReview={canReview}
               todoTasks={todoTasks}
@@ -233,8 +269,12 @@ function GamePlanApplication() {
               inProgressTasks={
                 inProgressTasks
               }
-              completedTasks={completedTasks}
-              onSelectTask={setSelectedTask}
+              completedTasks={
+                completedTasks
+              }
+              onSelectTask={
+                setSelectedTask
+              }
               onOpenCreateModal={() =>
                 setIsCreateModalOpen(true)
               }
@@ -263,15 +303,23 @@ function GamePlanApplication() {
           element={
             <TaskStatusPage
               tasks={filteredTasks}
-              selectedTask={selectedTask}
+              selectedTask={
+                selectedTask
+              }
               isCreateModalOpen={
                 isCreateModalOpen
               }
-              isLoadingTasks={isLoadingTasks}
-              isSavingTask={isSavingTask}
+              isLoadingTasks={
+                isLoadingTasks
+              }
+              isSavingTask={
+                isSavingTask
+              }
               isDarkMode={isDarkMode}
               canReview={canReview}
-              onSelectTask={setSelectedTask}
+              onSelectTask={
+                setSelectedTask
+              }
               onOpenCreateModal={() =>
                 setIsCreateModalOpen(true)
               }
@@ -345,21 +393,25 @@ type PageThemeProps = {
   isDarkMode: boolean;
 };
 
-type HomePageProps = PageThemeProps & {
-  tasks: Task[];
-};
+type HomePageProps =
+  PageThemeProps & {
+    tasks: Task[];
+  };
 
 function HomePage({
   tasks,
   isDarkMode,
 }: HomePageProps) {
-  const activeTasks = tasks.filter(
-    (task) => task.status !== "done",
-  ).length;
+  const activeTasks =
+    tasks.filter(
+      (task) =>
+        task.status !== "done",
+    ).length;
 
-  const urgentTasks = tasks.filter(
-    (task) => task.isUrgent,
-  ).length;
+  const urgentTasks =
+    tasks.filter(
+      (task) => task.isUrgent,
+    ).length;
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">

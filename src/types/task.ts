@@ -18,9 +18,17 @@ export type Task = {
   status: Status;
   managerMessage?: string;
 
+  /*
+   * The owner of the task and board.
+   * RLS compares this with auth.uid().
+   */
+  userId?: string;
+
+  teamId?: string | null;
   assignedTo?: string | null;
   assignedBy?: string | null;
   createdBy?: string;
+
   createdAt?: string;
   updatedAt?: string;
 };

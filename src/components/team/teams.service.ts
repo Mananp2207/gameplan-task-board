@@ -1,10 +1,12 @@
 import { supabase } from "../../lib/supabase";
 import type {
+  AddTeamMemberInput,
   CreateTeamInput,
   Team,
   TeamMember,
   TeamMemberProfile,
   TeamUserRole,
+  UpdateTeamMemberRoleInput,
 } from "./team.types";
 
 type ProfileRow = {
@@ -27,6 +29,7 @@ type TeamRow = {
 type TeamMemberRow = {
   team_id: string;
   user_id: string;
+  role: TeamUserRole;
   joined_at: string;
 };
 
@@ -141,6 +144,7 @@ export async function getTeams(): Promise<
       `
         team_id,
         user_id,
+        role,
         joined_at
       `,
     )
@@ -222,6 +226,7 @@ export async function getTeams(): Promise<
         const member: TeamMember = {
           teamId: membership.team_id,
           userId: membership.user_id,
+          role: membership.role,
           joinedAt:
             membership.joined_at,
           profile: mapProfile(profile),
@@ -247,6 +252,48 @@ export async function getTeams(): Promise<
       members,
     };
   });
+}
+
+export async function getTeamById(
+  teamId: string,
+): Promise<Team> {
+  const teams = await getTeams();
+
+  const team = teams.find(
+    (currentTeam) =>
+      currentTeam.id === teamId,
+  );
+
+  if (!team) {
+    throw new Error(
+      "The requested team could not be found.",
+    );
+  }
+
+  return team;
+}
+
+export async function getProfilesNotInTeam(
+  teamId: string,
+): Promise<TeamMemberProfile[]> {
+  const [
+    profiles,
+    team,
+  ] = await Promise.all([
+    getAvailableProfiles(),
+    getTeamById(teamId),
+  ]);
+
+  const existingMemberIds = new Set(
+    team.members.map(
+      (member) => member.userId,
+    ),
+  );
+
+  return profiles.filter(
+    (profile) =>
+      !existingMemberIds.has(profile.id),
+  );
 }
 
 export async function createTeam({
@@ -287,18 +334,30 @@ export async function createTeam({
   }
 
   const uniqueMemberIds = Array.from(
-    new Set([
-      currentUserId,
-      ...memberIds,
-    ]),
+    new Set(memberIds),
+  ).filter(
+    (userId) =>
+      userId !== currentUserId,
   );
 
-  const memberships =
-    uniqueMemberIds.map((userId) => ({
+  const memberships = [
+    {
       team_id: createdTeam.id,
-      user_id: userId,
+      user_id: currentUserId,
+      role:
+        "supervisor" satisfies TeamUserRole,
       added_by: currentUserId,
-    }));
+    },
+    ...uniqueMemberIds.map(
+      (userId) => ({
+        team_id: createdTeam.id,
+        user_id: userId,
+        role:
+          "member" satisfies TeamUserRole,
+        added_by: currentUserId,
+      }),
+    ),
+  ];
 
   const { error: membershipError } =
     await supabase
@@ -313,6 +372,84 @@ export async function createTeam({
 
     throw new Error(
       `The team was created, but its members could not be added: ${membershipError.message}`,
+    );
+  }
+}
+
+export async function addTeamMember({
+  teamId,
+  userId,
+  role,
+}: AddTeamMemberInput): Promise<void> {
+  const currentUserId =
+    await getCurrentUserId();
+
+  const { error } = await supabase
+    .from("team_members")
+    .insert({
+      team_id: teamId,
+      user_id: userId,
+      role,
+      added_by: currentUserId,
+    });
+
+  if (error) {
+    if (
+      error.code === "23505"
+    ) {
+      throw new Error(
+        "This user is already a member of the team.",
+      );
+    }
+
+    throw new Error(
+      `Unable to add the member: ${error.message}`,
+    );
+  }
+}
+
+export async function removeTeamMember(
+  teamId: string,
+  userId: string,
+): Promise<void> {
+  const currentUserId =
+    await getCurrentUserId();
+
+  if (userId === currentUserId) {
+    throw new Error(
+      "You cannot remove yourself from a team you are currently managing.",
+    );
+  }
+
+  const { error } = await supabase
+    .from("team_members")
+    .delete()
+    .eq("team_id", teamId)
+    .eq("user_id", userId);
+
+  if (error) {
+    throw new Error(
+      `Unable to remove the member: ${error.message}`,
+    );
+  }
+}
+
+export async function updateTeamMemberRole({
+  teamId,
+  userId,
+  role,
+}: UpdateTeamMemberRoleInput): Promise<void> {
+  const { error } = await supabase
+    .from("team_members")
+    .update({
+      role,
+    })
+    .eq("team_id", teamId)
+    .eq("user_id", userId);
+
+  if (error) {
+    throw new Error(
+      `Unable to update the member's role: ${error.message}`,
     );
   }
 }

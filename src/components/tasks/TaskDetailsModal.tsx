@@ -3,7 +3,10 @@ import {
   useState,
   type FormEvent,
 } from "react";
-import type { Status, Task } from "../../types/task";
+import type {
+  Status,
+  Task,
+} from "../../types/task";
 
 type TaskDetailsModalProps = {
   task: Task | null;
@@ -17,8 +20,12 @@ type TaskDetailsModalProps = {
     taskId: string,
     managerMessage: string,
   ) => void;
-  onUpdateTask: (updatedTask: Task) => void;
-  onDeleteTask: (taskId: string) => void;
+  onUpdateTask: (
+    updatedTask: Task,
+  ) => void;
+  onDeleteTask: (
+    taskId: string,
+  ) => void;
 };
 
 export default function TaskDetailsModal({
@@ -30,7 +37,8 @@ export default function TaskDetailsModal({
   onUpdateTask,
   onDeleteTask,
 }: TaskDetailsModalProps) {
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] =
+    useState(false);
 
   const [
     isDeleteConfirmationOpen,
@@ -42,12 +50,24 @@ export default function TaskDetailsModal({
     setIsReturnFormOpen,
   ] = useState(false);
 
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [dueDate, setDueDate] = useState("");
-  const [isUrgent, setIsUrgent] = useState(false);
-  const [managerMessage, setManagerMessage] =
+  const [title, setTitle] =
     useState("");
+
+  const [
+    description,
+    setDescription,
+  ] = useState("");
+
+  const [dueDate, setDueDate] =
+    useState("");
+
+  const [isUrgent, setIsUrgent] =
+    useState(false);
+
+  const [
+    managerMessage,
+    setManagerMessage,
+  ] = useState("");
 
   useEffect(() => {
     if (!task) {
@@ -74,20 +94,21 @@ export default function TaskDetailsModal({
   ) {
     event.preventDefault();
 
-    if (!task) {
-      return;
-    }
+    const trimmedTitle =
+      title.trim();
 
-    const trimmedTitle = title.trim();
-
-    if (!trimmedTitle || !dueDate) {
+    if (
+      !trimmedTitle ||
+      !dueDate
+    ) {
       return;
     }
 
     const updatedTask: Task = {
       ...task,
       title: trimmedTitle,
-      description: description.trim(),
+      description:
+        description.trim(),
       dueDate,
       isUrgent,
     };
@@ -97,36 +118,35 @@ export default function TaskDetailsModal({
   }
 
   function handleStartEditing() {
-    if (!task) {
-      return;
-    }
-
     setTitle(task.title);
-    setDescription(task.description);
+    setDescription(
+      task.description,
+    );
     setDueDate(task.dueDate);
     setIsUrgent(task.isUrgent);
+
     setIsEditing(true);
     setIsReturnFormOpen(false);
   }
 
   function handleCancelEditing() {
-    if (!task) {
-      return;
-    }
-
     setTitle(task.title);
-    setDescription(task.description);
+    setDescription(
+      task.description,
+    );
     setDueDate(task.dueDate);
     setIsUrgent(task.isUrgent);
+
     setIsEditing(false);
   }
 
-  function handleMove(newStatus: Status) {
-    if (!task) {
-      return;
-    }
-
-    onMoveTask(task.id, newStatus);
+  function handleMove(
+    newStatus: Status,
+  ) {
+    onMoveTask(
+      task.id,
+      newStatus,
+    );
   }
 
   function handleOpenReturnForm() {
@@ -144,36 +164,45 @@ export default function TaskDetailsModal({
   ) {
     event.preventDefault();
 
-    if (!task) {
-      return;
-    }
-
-    const trimmedMessage = managerMessage.trim();
+    const trimmedMessage =
+      managerMessage.trim();
 
     if (!trimmedMessage) {
       return;
     }
 
-    onReturnTask(task.id, trimmedMessage);
+    onReturnTask(
+      task.id,
+      trimmedMessage,
+    );
+
     setManagerMessage("");
     setIsReturnFormOpen(false);
   }
 
   function handleDeleteTask() {
-    if (!task) {
+    if (!canReview) {
       return;
     }
 
     onDeleteTask(task.id);
-    setIsDeleteConfirmationOpen(false);
+    setIsDeleteConfirmationOpen(
+      false,
+    );
   }
 
-  function formatStatus(status: Status) {
-    if (status === "inprogress") {
+  function formatStatus(
+    status: Status,
+  ) {
+    if (
+      status === "inprogress"
+    ) {
       return "In Progress";
     }
 
-    if (status === "inreview") {
+    if (
+      status === "inreview"
+    ) {
       return "In Review";
     }
 
@@ -242,8 +271,13 @@ export default function TaskDetailsModal({
                   id="edit-task-title"
                   type="text"
                   value={title}
-                  onChange={(event) =>
-                    setTitle(event.target.value)
+                  onChange={(
+                    event,
+                  ) =>
+                    setTitle(
+                      event.target
+                        .value,
+                    )
                   }
                   required
                   autoFocus
@@ -261,9 +295,16 @@ export default function TaskDetailsModal({
 
                 <textarea
                   id="edit-task-description"
-                  value={description}
-                  onChange={(event) =>
-                    setDescription(event.target.value)
+                  value={
+                    description
+                  }
+                  onChange={(
+                    event,
+                  ) =>
+                    setDescription(
+                      event.target
+                        .value,
+                    )
                   }
                   rows={4}
                   className="w-full resize-none rounded-lg border border-slate-300 px-4 py-2.5 text-slate-900 outline-none transition focus:border-yellow-500 focus:ring-2 focus:ring-yellow-100"
@@ -282,8 +323,13 @@ export default function TaskDetailsModal({
                   id="edit-task-due-date"
                   type="date"
                   value={dueDate}
-                  onChange={(event) =>
-                    setDueDate(event.target.value)
+                  onChange={(
+                    event,
+                  ) =>
+                    setDueDate(
+                      event.target
+                        .value,
+                    )
                   }
                   required
                   className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-slate-900 outline-none transition focus:border-yellow-500 focus:ring-2 focus:ring-yellow-100"
@@ -293,9 +339,16 @@ export default function TaskDetailsModal({
               <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4">
                 <input
                   type="checkbox"
-                  checked={isUrgent}
-                  onChange={(event) =>
-                    setIsUrgent(event.target.checked)
+                  checked={
+                    isUrgent
+                  }
+                  onChange={(
+                    event,
+                  ) =>
+                    setIsUrgent(
+                      event.target
+                        .checked,
+                    )
                   }
                   className="h-5 w-5"
                 />
@@ -308,7 +361,9 @@ export default function TaskDetailsModal({
               <div className="flex flex-wrap justify-end gap-3 border-t border-slate-200 pt-5">
                 <button
                   type="button"
-                  onClick={handleCancelEditing}
+                  onClick={
+                    handleCancelEditing
+                  }
                   className="rounded-lg border border-slate-300 px-4 py-2.5 font-semibold text-slate-700 transition hover:bg-slate-100"
                 >
                   Cancel
@@ -316,7 +371,10 @@ export default function TaskDetailsModal({
 
                 <button
                   type="submit"
-                  disabled={!title.trim() || !dueDate}
+                  disabled={
+                    !title.trim() ||
+                    !dueDate
+                  }
                   className="rounded-lg bg-yellow-600 px-4 py-2.5 font-semibold text-white transition hover:bg-yellow-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Save Changes
@@ -327,11 +385,14 @@ export default function TaskDetailsModal({
             <>
               {task.description ? (
                 <p className="text-sm leading-6 text-slate-600">
-                  {task.description}
+                  {
+                    task.description
+                  }
                 </p>
               ) : (
                 <p className="text-sm italic text-slate-400">
-                  No description provided.
+                  No description
+                  provided.
                 </p>
               )}
 
@@ -342,11 +403,15 @@ export default function TaskDetailsModal({
                   </p>
 
                   <p className="mt-1 font-semibold text-slate-900">
-                    {new Intl.DateTimeFormat("en-US", {
-                      month: "long",
-                      day: "numeric",
-                      year: "numeric",
-                    }).format(
+                    {new Intl.DateTimeFormat(
+                      "en-US",
+                      {
+                        month:
+                          "long",
+                        day: "numeric",
+                        year: "numeric",
+                      },
+                    ).format(
                       new Date(
                         `${task.dueDate}T00:00:00`,
                       ),
@@ -360,7 +425,9 @@ export default function TaskDetailsModal({
                   </p>
 
                   <p className="mt-1 font-semibold text-slate-900">
-                    {formatStatus(task.status)}
+                    {formatStatus(
+                      task.status,
+                    )}
                   </p>
                 </div>
               </div>
@@ -372,98 +439,131 @@ export default function TaskDetailsModal({
               )}
 
               {task.managerMessage &&
-                task.status === "todo" && (
+                task.status ===
+                  "todo" && (
                   <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
                     <p className="text-xs font-bold uppercase tracking-wide text-amber-700">
                       Manager feedback
                     </p>
 
                     <p className="mt-1 whitespace-pre-wrap text-sm text-amber-800">
-                      {task.managerMessage}
+                      {
+                        task.managerMessage
+                      }
                     </p>
                   </div>
                 )}
 
-              {isReturnFormOpen && (
-                <form
-                  onSubmit={handleReturnTask}
-                  className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4"
-                >
-                  <label
-                    htmlFor="manager-message"
-                    className="block text-sm font-bold text-red-800"
-                  >
-                    Feedback for the task owner
-                  </label>
-
-                  <p className="mt-1 text-sm text-red-700">
-                    Explain what needs to be changed before
-                    this task is submitted again.
-                  </p>
-
-                  <textarea
-                    id="manager-message"
-                    value={managerMessage}
-                    onChange={(event) =>
-                      setManagerMessage(
-                        event.target.value,
-                      )
+              {isReturnFormOpen &&
+                canReview && (
+                  <form
+                    onSubmit={
+                      handleReturnTask
                     }
-                    rows={4}
-                    required
-                    autoFocus
-                    placeholder="Enter the changes that are needed..."
-                    className="mt-3 w-full resize-none rounded-lg border border-red-300 bg-white px-4 py-2.5 text-slate-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
-                  />
-
-                  <div className="mt-3 flex justify-end gap-3">
-                    <button
-                      type="button"
-                      onClick={handleCancelReturn}
-                      className="rounded-lg border border-red-300 bg-white px-4 py-2.5 font-semibold text-red-700 transition hover:bg-red-100"
+                    className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4"
+                  >
+                    <label
+                      htmlFor="manager-message"
+                      className="block text-sm font-bold text-red-800"
                     >
-                      Cancel
-                    </button>
+                      Feedback for
+                      the task owner
+                    </label>
 
-                    <button
-                      type="submit"
-                      disabled={!managerMessage.trim()}
-                      className="rounded-lg bg-red-600 px-4 py-2.5 font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Return to To Do
-                    </button>
-                  </div>
-                </form>
-              )}
+                    <p className="mt-1 text-sm text-red-700">
+                      Explain what
+                      needs to be
+                      changed before
+                      this task is
+                      submitted again.
+                    </p>
+
+                    <textarea
+                      id="manager-message"
+                      value={
+                        managerMessage
+                      }
+                      onChange={(
+                        event,
+                      ) =>
+                        setManagerMessage(
+                          event
+                            .target
+                            .value,
+                        )
+                      }
+                      rows={4}
+                      required
+                      autoFocus
+                      placeholder="Enter the changes that are needed..."
+                      className="mt-3 w-full resize-none rounded-lg border border-red-300 bg-white px-4 py-2.5 text-slate-900 outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                    />
+
+                    <div className="mt-3 flex justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={
+                          handleCancelReturn
+                        }
+                        className="rounded-lg border border-red-300 bg-white px-4 py-2.5 font-semibold text-red-700 transition hover:bg-red-100"
+                      >
+                        Cancel
+                      </button>
+
+                      <button
+                        type="submit"
+                        disabled={
+                          !managerMessage.trim()
+                        }
+                        className="rounded-lg bg-red-600 px-4 py-2.5 font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Return to To Do
+                      </button>
+                    </div>
+                  </form>
+                )}
 
               <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-5">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setIsDeleteConfirmationOpen(true)
-                  }
-                  className="rounded-lg border border-red-300 bg-red-50 px-4 py-2.5 font-semibold text-red-700 transition hover:bg-red-100"
-                >
-                  Delete Task
-                </button>
-
-                <div className="flex flex-wrap justify-end gap-3">
-                  {(task.status === "todo" ||
-                    task.status === "inprogress") && (
+                <div>
+                  {canReview && (
                     <button
                       type="button"
-                      onClick={handleStartEditing}
+                      onClick={() =>
+                        setIsDeleteConfirmationOpen(
+                          true,
+                        )
+                      }
+                      className="rounded-lg border border-red-300 bg-red-50 px-4 py-2.5 font-semibold text-red-700 transition hover:bg-red-100"
+                    >
+                      Delete Task
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap justify-end gap-3">
+                  {(task.status ===
+                    "todo" ||
+                    task.status ===
+                      "inprogress") && (
+                    <button
+                      type="button"
+                      onClick={
+                        handleStartEditing
+                      }
                       className="rounded-lg border border-slate-300 px-4 py-2.5 font-semibold text-slate-700 transition hover:bg-slate-100"
                     >
                       Edit Task
                     </button>
                   )}
 
-                  {task.status === "todo" && (
+                  {task.status ===
+                    "todo" && (
                     <button
                       type="button"
                       onClick={() =>
-                        handleMove("inprogress")
+                        handleMove(
+                          "inprogress",
+                        )
                       }
                       className="rounded-lg bg-yellow-600 px-4 py-2.5 font-semibold text-white transition hover:bg-yellow-700"
                     >
@@ -471,25 +571,32 @@ export default function TaskDetailsModal({
                     </button>
                   )}
 
-                  {task.status === "inprogress" && (
+                  {task.status ===
+                    "inprogress" && (
                     <button
                       type="button"
                       onClick={() =>
-                        handleMove("inreview")
+                        handleMove(
+                          "inreview",
+                        )
                       }
                       className="rounded-lg bg-violet-600 px-4 py-2.5 font-semibold text-white transition hover:bg-violet-700"
                     >
-                      Submit for Review
+                      Submit for
+                      Review
                     </button>
                   )}
 
-                  {task.status === "inreview" &&
+                  {task.status ===
+                    "inreview" &&
                     canReview &&
                     !isReturnFormOpen && (
                       <>
                         <button
                           type="button"
-                          onClick={handleOpenReturnForm}
+                          onClick={
+                            handleOpenReturnForm
+                          }
                           className="rounded-lg border border-red-300 px-4 py-2.5 font-semibold text-red-700 transition hover:bg-red-50"
                         >
                           Return Task
@@ -498,7 +605,9 @@ export default function TaskDetailsModal({
                         <button
                           type="button"
                           onClick={() =>
-                            handleMove("done")
+                            handleMove(
+                              "done",
+                            )
                           }
                           className="rounded-lg bg-green-600 px-4 py-2.5 font-semibold text-white transition hover:bg-green-700"
                         >
@@ -507,14 +616,17 @@ export default function TaskDetailsModal({
                       </>
                     )}
 
-                  {task.status === "inreview" &&
+                  {task.status ===
+                    "inreview" &&
                     !canReview && (
                       <div className="rounded-lg bg-slate-100 px-4 py-2.5 font-semibold text-slate-600">
-                        Waiting for manager review
+                        Waiting for
+                        manager review
                       </div>
                     )}
 
-                  {task.status === "done" && (
+                  {task.status ===
+                    "done" && (
                     <div className="rounded-lg bg-green-100 px-4 py-2.5 font-bold text-green-700">
                       ✓ Completed
                     </div>
@@ -526,63 +638,74 @@ export default function TaskDetailsModal({
         </div>
       </div>
 
-      {isDeleteConfirmationOpen && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4"
-          onMouseDown={() =>
-            setIsDeleteConfirmationOpen(false)
-          }
-        >
+      {isDeleteConfirmationOpen &&
+        canReview && (
           <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="delete-task-title"
-            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
-            onMouseDown={(event) =>
-              event.stopPropagation()
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4"
+            onMouseDown={() =>
+              setIsDeleteConfirmationOpen(
+                false,
+              )
             }
           >
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-2xl">
-              🗑️
-            </div>
-
-            <h2
-              id="delete-task-title"
-              className="mt-4 text-xl font-bold text-slate-900"
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="delete-task-title"
+              className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+              onMouseDown={(
+                event,
+              ) =>
+                event.stopPropagation()
+              }
             >
-              Delete task?
-            </h2>
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-2xl">
+                🗑️
+              </div>
 
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              Are you sure you want to delete{" "}
-              <span className="font-bold text-slate-900">
-                “{task.title}”
-              </span>
-              ? This action cannot be undone.
-            </p>
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() =>
-                  setIsDeleteConfirmationOpen(false)
-                }
-                className="rounded-lg border border-slate-300 px-4 py-2.5 font-semibold text-slate-700 transition hover:bg-slate-100"
+              <h2
+                id="delete-task-title"
+                className="mt-4 text-xl font-bold text-slate-900"
               >
-                Cancel
-              </button>
+                Delete task?
+              </h2>
 
-              <button
-                type="button"
-                onClick={handleDeleteTask}
-                className="rounded-lg bg-red-600 px-4 py-2.5 font-semibold text-white transition hover:bg-red-700"
-              >
-                Delete Task
-              </button>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Are you sure you
+                want to delete{" "}
+                <span className="font-bold text-slate-900">
+                  “{task.title}”
+                </span>
+                ? This action cannot
+                be undone.
+              </p>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setIsDeleteConfirmationOpen(
+                      false,
+                    )
+                  }
+                  className="rounded-lg border border-slate-300 px-4 py-2.5 font-semibold text-slate-700 transition hover:bg-slate-100"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={
+                    handleDeleteTask
+                  }
+                  className="rounded-lg bg-red-600 px-4 py-2.5 font-semibold text-white transition hover:bg-red-700"
+                >
+                  Delete Task
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
     </>
   );
 }

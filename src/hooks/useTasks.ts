@@ -124,7 +124,7 @@ export default function useTasks() {
 
   async function handleCreateTask(
     newTask: Task,
-  ) {
+  ): Promise<void> {
     if (isSavingTask) {
       return;
     }
@@ -145,9 +145,12 @@ export default function useTasks() {
 
       setIsCreateModalOpen(false);
     } catch (error) {
-      setErrorMessage(
-        getErrorMessage(error),
-      );
+      const message =
+        getErrorMessage(error);
+
+      setErrorMessage(message);
+
+      throw new Error(message);
     } finally {
       setIsSavingTask(false);
     }

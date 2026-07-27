@@ -8,8 +8,6 @@ import {
   LogOut,
   PlayCircle,
   Settings,
-  ShieldCheck,
-  UserRound,
   Users,
 } from "lucide-react";
 import {
@@ -70,7 +68,9 @@ const bottomMenu = [
   },
 ];
 
-function getLinkClass(isActive: boolean) {
+function getLinkClass(
+  isActive: boolean,
+) {
   return `flex items-center gap-3 rounded-xl px-4 py-3 font-medium transition ${
     isActive
       ? "bg-blue-600 text-white shadow-lg shadow-blue-950/20"
@@ -84,29 +84,39 @@ export default function Sidebar() {
   const {
     profile,
     user,
+    isAnonymous,
     signOut,
   } = useAuth();
 
-  const [isSigningOut, setIsSigningOut] =
-    useState(false);
+  const [
+    isSigningOut,
+    setIsSigningOut,
+  ] = useState(false);
 
-  const [signOutError, setSignOutError] =
-    useState("");
+  const [
+    signOutError,
+    setSignOutError,
+  ] = useState("");
 
-  const displayName =
-    profile?.fullName?.trim() ||
-    user?.email ||
-    "GamePlan User";
+  const displayName = getDisplayName({
+    fullName: profile?.fullName,
+    email:
+      user?.email ?? profile?.email,
+    isAnonymous,
+  });
 
-  const roleLabel =
-    profile?.role === "supervisor"
+  const roleLabel = isAnonymous
+    ? "Guest"
+    : profile?.role === "supervisor"
       ? "Supervisor"
       : "Member";
 
-  const RoleIcon =
-    profile?.role === "supervisor"
-      ? ShieldCheck
-      : UserRound;
+  const initials =
+    getInitials(displayName);
+
+  const avatarColor =
+    profile?.avatarColor?.trim() ||
+    "#2563eb";
 
   async function handleSignOut() {
     if (isSigningOut) {
@@ -119,7 +129,9 @@ export default function Sidebar() {
     const result = await signOut();
 
     if (result.error) {
-      setSignOutError(result.error);
+      setSignOutError(
+        result.error,
+      );
       setIsSigningOut(false);
       return;
     }
@@ -150,7 +162,9 @@ export default function Sidebar() {
               key={item.title}
               to={item.path}
               end={item.path === "/"}
-              className={({ isActive }) =>
+              className={({
+                isActive,
+              }) =>
                 getLinkClass(isActive)
               }
             >
@@ -169,7 +183,9 @@ export default function Sidebar() {
             <NavLink
               key={item.title}
               to={item.path}
-              className={({ isActive }) =>
+              className={({
+                isActive,
+              }) =>
                 getLinkClass(isActive)
               }
             >
@@ -183,8 +199,15 @@ export default function Sidebar() {
       <div className="border-t border-slate-800 p-4">
         <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
-              <RoleIcon size={19} />
+            <div
+              title={displayName}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-extrabold text-white shadow-sm"
+              style={{
+                backgroundColor:
+                  avatarColor,
+              }}
+            >
+              {initials}
             </div>
 
             <div className="min-w-0">
@@ -220,4 +243,63 @@ export default function Sidebar() {
       </div>
     </aside>
   );
+}
+
+type DisplayNameInput = {
+  fullName?: string | null;
+  email?: string | null;
+  isAnonymous: boolean;
+};
+
+function getDisplayName({
+  fullName,
+  email,
+  isAnonymous,
+}: DisplayNameInput) {
+  const safeFullName =
+    fullName?.trim() ?? "";
+
+  if (safeFullName) {
+    return safeFullName;
+  }
+
+  const safeEmail =
+    email?.trim() ?? "";
+
+  if (safeEmail) {
+    return safeEmail;
+  }
+
+  return isAnonymous
+    ? "Guest User"
+    : "GamePlan User";
+}
+
+function getInitials(
+  value: string | null | undefined,
+) {
+  const safeValue =
+    value?.trim() ?? "";
+
+  if (!safeValue) {
+    return "?";
+  }
+
+  const words = safeValue
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (words.length === 0) {
+    return "?";
+  }
+
+  if (words.length === 1) {
+    return words[0]
+      .slice(0, 2)
+      .toUpperCase();
+  }
+
+  return `${words[0][0]}${
+    words[words.length - 1][0]
+  }`.toUpperCase();
 }

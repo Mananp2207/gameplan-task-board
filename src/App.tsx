@@ -15,6 +15,7 @@ import LoginPage from "./pages/LoginPage";
 import SignUpPage from "./pages/SignUpPage";
 import TaskStatusPage from "./pages/TaskStatusPage";
 import type { Task } from "./types/task";
+import SettingsPage from "./pages/SettingsPage";
 
 const THEME_STORAGE_KEY = "gameplan-theme";
 
@@ -367,9 +368,7 @@ function GamePlanApplication() {
         <Route
           path="/settings"
           element={
-            <ComingSoonPage
-              title="Settings"
-              description="Workspace, profile, notification, and application settings will appear here."
+            <SettingsPage
               isDarkMode={isDarkMode}
             />
           }

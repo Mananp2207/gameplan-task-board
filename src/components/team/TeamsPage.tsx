@@ -436,8 +436,9 @@ function TeamCard({
                           : "text-slate-900"
                       }`}
                     >
-                      {member.profile.fullName ||
-                        member.profile.email}
+                      {getProfileDisplayName(
+                        member.profile,
+                      )}
                     </p>
 
                     <p className="truncate text-xs text-slate-500">
@@ -479,9 +480,11 @@ function MemberAvatar({
   isDarkMode,
   small = false,
 }: MemberAvatarProps) {
-  const initials = getInitials(
-    member.fullName || member.email,
-  );
+  const displayName =
+    getProfileDisplayName(member);
+
+  const initials =
+    getInitials(displayName);
 
   const sizeClass = small
     ? "h-9 w-9 text-xs"
@@ -489,8 +492,13 @@ function MemberAvatar({
 
   return (
     <div
-      title={member.fullName || member.email}
-      className={`flex shrink-0 items-center justify-center rounded-full border-2 bg-blue-600 font-extrabold text-white ${sizeClass} ${
+      title={displayName}
+      style={{
+        backgroundColor:
+          member.avatarColor ||
+          "#2563eb",
+      }}
+      className={`flex shrink-0 items-center justify-center rounded-full border-2 font-extrabold text-white ${sizeClass} ${
         isDarkMode
           ? "border-slate-900"
           : "border-white"
@@ -631,7 +639,8 @@ function CreateTeamModal({
     profiles.filter(
       (availableProfile) =>
         availableProfile.id !==
-        currentUserId,
+          currentUserId &&
+        availableProfile.email.length > 0,
     );
 
   function toggleMember(userId: string) {
@@ -864,10 +873,18 @@ function CreateTeamModal({
                         }`}
                       >
                         <div className="flex min-w-0 items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-extrabold text-white">
+                          <div
+                            style={{
+                              backgroundColor:
+                                member.avatarColor ||
+                                "#2563eb",
+                            }}
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-extrabold text-white"
+                          >
                             {getInitials(
-                              member.fullName ||
-                                member.email,
+                              getProfileDisplayName(
+                                member,
+                              ),
                             )}
                           </div>
 
@@ -879,8 +896,9 @@ function CreateTeamModal({
                                   : "text-slate-900"
                               }`}
                             >
-                              {member.fullName ||
-                                member.email}
+                              {getProfileDisplayName(
+                                member,
+                              )}
                             </p>
 
                             <p className="truncate text-xs text-slate-500">
@@ -954,15 +972,33 @@ function CreateTeamModal({
   );
 }
 
-function getInitials(value: string) {
-  const words = value
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
+function getProfileDisplayName(
+  member: TeamMemberProfile,
+) {
+  if (member.fullName) {
+    return member.fullName;
+  }
 
-  if (words.length === 0) {
+  if (member.email) {
+    return member.email;
+  }
+
+  return "Guest User";
+}
+
+function getInitials(
+  value: string | null | undefined,
+) {
+  const safeValue =
+    value?.trim() ?? "";
+
+  if (!safeValue) {
     return "?";
   }
+
+  const words = safeValue
+    .split(/\s+/)
+    .filter(Boolean);
 
   if (words.length === 1) {
     return words[0]

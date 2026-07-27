@@ -11,9 +11,9 @@ import type {
 
 type ProfileRow = {
   id: string;
-  full_name: string;
-  email: string;
-  role: TeamUserRole;
+  full_name: string | null;
+  email: string | null;
+  role: TeamUserRole | null;
   avatar_color: string | null;
 };
 
@@ -33,16 +33,31 @@ type TeamMemberRow = {
   joined_at: string;
 };
 
+const DEFAULT_AVATAR_COLOR = "#2563eb";
+
+function normalizeText(
+  value: string | null | undefined,
+): string {
+  return value?.trim() ?? "";
+}
+
 function mapProfile(
   profile: ProfileRow,
 ): TeamMemberProfile {
   return {
     id: profile.id,
-    fullName: profile.full_name,
-    email: profile.email,
-    role: profile.role,
+    fullName: normalizeText(
+      profile.full_name,
+    ),
+    email: normalizeText(profile.email),
+    role:
+      profile.role === "supervisor"
+        ? "supervisor"
+        : "member",
     avatarColor:
-      profile.avatar_color ?? "blue",
+      normalizeText(
+        profile.avatar_color,
+      ) || DEFAULT_AVATAR_COLOR,
   };
 }
 
@@ -91,9 +106,12 @@ export async function getAvailableProfiles(): Promise<
     );
   }
 
-  return ((data ?? []) as ProfileRow[]).map(
-    mapProfile,
-  );
+  return ((data ?? []) as ProfileRow[])
+    .map(mapProfile)
+    .filter(
+      (profile) =>
+        profile.email.length > 0,
+    );
 }
 
 export async function getTeams(): Promise<

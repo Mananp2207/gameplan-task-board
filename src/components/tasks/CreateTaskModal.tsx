@@ -7,6 +7,7 @@ import {
 import {
   AlertTriangle,
   LoaderCircle,
+  UserRound,
   Users,
   X,
 } from "lucide-react";
@@ -30,7 +31,11 @@ export default function CreateTaskModal({
   onClose,
   onCreateTask,
 }: CreateTaskModalProps) {
-  const { user, profile } = useAuth();
+  const {
+    user,
+    profile,
+    isAnonymous,
+  } = useAuth();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] =
@@ -44,8 +49,10 @@ export default function CreateTaskModal({
     Team[]
   >([]);
 
-  const [selectedTeamId, setSelectedTeamId] =
-    useState("");
+  const [
+    selectedTeamId,
+    setSelectedTeamId,
+  ] = useState("");
 
   const [
     selectedMemberId,
@@ -62,11 +69,23 @@ export default function CreateTaskModal({
     setErrorMessage,
   ] = useState("");
 
-  const canCreateTask =
+  const isSupervisor =
     profile?.role === "supervisor";
 
+  const canCreateTask =
+    isAnonymous || isSupervisor;
+
   useEffect(() => {
-    if (!isOpen || !user) {
+    if (
+      !isOpen ||
+      !user ||
+      isAnonymous ||
+      !isSupervisor
+    ) {
+      setTeams([]);
+      setSelectedTeamId("");
+      setSelectedMemberId("");
+      setIsLoadingTeams(false);
       return;
     }
 
@@ -77,7 +96,8 @@ export default function CreateTaskModal({
         setIsLoadingTeams(true);
         setErrorMessage("");
 
-        const loadedTeams = await getTeams();
+        const loadedTeams =
+          await getTeams();
 
         if (!isMounted) {
           return;
@@ -91,18 +111,23 @@ export default function CreateTaskModal({
             const isTeamSupervisor =
               team.members.some(
                 (member) =>
-                  member.userId === user.id &&
-                  member.role === "supervisor",
+                  member.userId ===
+                    user.id &&
+                  member.role ===
+                    "supervisor",
               );
 
             return (
-              isCreator || isTeamSupervisor
+              isCreator ||
+              isTeamSupervisor
             );
           });
 
         setTeams(manageableTeams);
 
-        if (manageableTeams.length === 1) {
+        if (
+          manageableTeams.length === 1
+        ) {
           setSelectedTeamId(
             manageableTeams[0].id,
           );
@@ -127,7 +152,12 @@ export default function CreateTaskModal({
     return () => {
       isMounted = false;
     };
-  }, [isOpen, user]);
+  }, [
+    isOpen,
+    user,
+    isAnonymous,
+    isSupervisor,
+  ]);
 
   const selectedTeam = useMemo(
     () =>
@@ -171,13 +201,22 @@ export default function CreateTaskModal({
   ) {
     event.preventDefault();
 
-    const trimmedTitle = title.trim();
+    const trimmedTitle =
+      title.trim();
+
     const trimmedDescription =
       description.trim();
 
+    if (!user) {
+      setErrorMessage(
+        "A valid session is required to create a task.",
+      );
+      return;
+    }
+
     if (!canCreateTask) {
       setErrorMessage(
-        "Only supervisors can create and assign tasks.",
+        "Only supervisors and guest users can create tasks.",
       );
       return;
     }
@@ -189,23 +228,29 @@ export default function CreateTaskModal({
       return;
     }
 
-    if (!selectedTeamId) {
+    if (!dueDate) {
+      setErrorMessage(
+        "Please select a due date.",
+      );
+      return;
+    }
+
+    if (
+      !isAnonymous &&
+      !selectedTeamId
+    ) {
       setErrorMessage(
         "Please select a team.",
       );
       return;
     }
 
-    if (!selectedMemberId) {
+    if (
+      !isAnonymous &&
+      !selectedMemberId
+    ) {
       setErrorMessage(
         "Please select a team member.",
-      );
-      return;
-    }
-
-    if (!dueDate) {
-      setErrorMessage(
-        "Please select a due date.",
       );
       return;
     }
@@ -215,12 +260,19 @@ export default function CreateTaskModal({
     const newTask: Task = {
       id: crypto.randomUUID(),
       title: trimmedTitle,
-      description: trimmedDescription,
+      description:
+        trimmedDescription,
       dueDate,
       isUrgent,
       status: "todo",
-      teamId: selectedTeamId,
-      assignedTo: selectedMemberId,
+
+      teamId: isAnonymous
+        ? null
+        : selectedTeamId,
+
+      assignedTo: isAnonymous
+        ? user.id
+        : selectedMemberId,
     };
 
     try {
@@ -269,7 +321,9 @@ export default function CreateTaskModal({
                   : "text-slate-900"
               }`}
             >
-              Create and assign task
+              {isAnonymous
+                ? "Create personal task"
+                : "Create and assign task"}
             </h2>
 
             <p
@@ -279,8 +333,9 @@ export default function CreateTaskModal({
                   : "text-slate-500"
               }`}
             >
-              Select a team and assign the
-              task to one of its members.
+              {isAnonymous
+                ? "This task will belong only to your secure guest workspace."
+                : "Select a team and assign the task to one of its members."}
             </p>
           </div>
 
@@ -314,144 +369,201 @@ export default function CreateTaskModal({
             </div>
           )}
 
-          <div className="grid gap-5 md:grid-cols-2">
-            <div>
-              <label
-                htmlFor="task-team"
-                className={`mb-2 block text-sm font-bold ${
-                  isDarkMode
-                    ? "text-slate-200"
-                    : "text-slate-700"
-                }`}
-              >
-                Team
-              </label>
-
-              <select
-                id="task-team"
-                value={selectedTeamId}
-                onChange={(event) =>
-                  setSelectedTeamId(
-                    event.target.value,
-                  )
-                }
-                disabled={
-                  isSaving || isLoadingTeams
-                }
-                required
-                className={`w-full rounded-xl border px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 disabled:cursor-not-allowed disabled:opacity-60 ${
-                  isDarkMode
-                    ? "border-slate-700 bg-slate-950 text-white"
-                    : "border-slate-300 bg-white text-slate-900"
-                }`}
-              >
-                <option value="">
-                  {isLoadingTeams
-                    ? "Loading teams..."
-                    : "Select a team"}
-                </option>
-
-                {teams.map((team) => (
-                  <option
-                    key={team.id}
-                    value={team.id}
-                  >
-                    {team.name}
-                  </option>
-                ))}
-              </select>
-
-              {!isLoadingTeams &&
-                teams.length === 0 && (
-                  <p className="mt-2 text-xs font-medium text-amber-600">
-                    Create a team before assigning
-                    tasks.
-                  </p>
-                )}
-            </div>
-
-            <div>
-              <label
-                htmlFor="task-member"
-                className={`mb-2 block text-sm font-bold ${
-                  isDarkMode
-                    ? "text-slate-200"
-                    : "text-slate-700"
-                }`}
-              >
-                Assign to
-              </label>
-
-              <select
-                id="task-member"
-                value={selectedMemberId}
-                onChange={(event) =>
-                  setSelectedMemberId(
-                    event.target.value,
-                  )
-                }
-                disabled={
-                  isSaving || !selectedTeam
-                }
-                required
-                className={`w-full rounded-xl border px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 disabled:cursor-not-allowed disabled:opacity-60 ${
-                  isDarkMode
-                    ? "border-slate-700 bg-slate-950 text-white"
-                    : "border-slate-300 bg-white text-slate-900"
-                }`}
-              >
-                <option value="">
-                  {selectedTeam
-                    ? "Select a member"
-                    : "Select a team first"}
-                </option>
-
-                {selectedTeam?.members.map(
-                  (member) => (
-                    <option
-                      key={member.userId}
-                      value={member.userId}
-                    >
-                      {member.profile.fullName ||
-                        member.profile.email}{" "}
-                      —{" "}
-                      {member.role ===
-                      "supervisor"
-                        ? "Supervisor"
-                        : "Member"}
-                    </option>
-                  ),
-                )}
-              </select>
-            </div>
-          </div>
-
-          {selectedTeam && (
+          {isAnonymous ? (
             <div
-              className={`flex items-center gap-3 rounded-2xl border px-4 py-3 ${
+              className={`flex items-center gap-4 rounded-2xl border p-4 ${
                 isDarkMode
-                  ? "border-blue-500/20 bg-blue-500/10 text-blue-200"
-                  : "border-blue-100 bg-blue-50 text-blue-800"
+                  ? "border-blue-500/20 bg-blue-500/10"
+                  : "border-blue-100 bg-blue-50"
               }`}
             >
-              <Users size={20} />
+              <div
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
+                  isDarkMode
+                    ? "bg-blue-500/20 text-blue-300"
+                    : "bg-blue-100 text-blue-700"
+                }`}
+              >
+                <UserRound size={22} />
+              </div>
 
               <div>
-                <p className="text-sm font-bold">
-                  {selectedTeam.name}
+                <p
+                  className={`font-bold ${
+                    isDarkMode
+                      ? "text-blue-200"
+                      : "text-blue-900"
+                  }`}
+                >
+                  Personal guest workspace
                 </p>
 
-                <p className="text-xs opacity-80">
-                  {selectedTeam.members.length}{" "}
-                  {selectedTeam.members.length ===
-                  1
-                    ? "member"
-                    : "members"}{" "}
-                  available
+                <p
+                  className={`mt-1 text-sm ${
+                    isDarkMode
+                      ? "text-blue-300/80"
+                      : "text-blue-700"
+                  }`}
+                >
+                  The task is automatically
+                  assigned to your anonymous
+                  account. Other guests cannot
+                  access it.
                 </p>
               </div>
             </div>
+          ) : (
+            <div className="grid gap-5 md:grid-cols-2">
+              <div>
+                <label
+                  htmlFor="task-team"
+                  className={`mb-2 block text-sm font-bold ${
+                    isDarkMode
+                      ? "text-slate-200"
+                      : "text-slate-700"
+                  }`}
+                >
+                  Team
+                </label>
+
+                <select
+                  id="task-team"
+                  value={selectedTeamId}
+                  onChange={(event) =>
+                    setSelectedTeamId(
+                      event.target.value,
+                    )
+                  }
+                  disabled={
+                    isSaving ||
+                    isLoadingTeams
+                  }
+                  required
+                  className={`w-full rounded-xl border px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 disabled:cursor-not-allowed disabled:opacity-60 ${
+                    isDarkMode
+                      ? "border-slate-700 bg-slate-950 text-white"
+                      : "border-slate-300 bg-white text-slate-900"
+                  }`}
+                >
+                  <option value="">
+                    {isLoadingTeams
+                      ? "Loading teams..."
+                      : "Select a team"}
+                  </option>
+
+                  {teams.map((team) => (
+                    <option
+                      key={team.id}
+                      value={team.id}
+                    >
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
+
+                {!isLoadingTeams &&
+                  teams.length === 0 && (
+                    <p className="mt-2 text-xs font-medium text-amber-600">
+                      Create a team before
+                      assigning team tasks.
+                    </p>
+                  )}
+              </div>
+
+              <div>
+                <label
+                  htmlFor="task-member"
+                  className={`mb-2 block text-sm font-bold ${
+                    isDarkMode
+                      ? "text-slate-200"
+                      : "text-slate-700"
+                  }`}
+                >
+                  Assign to
+                </label>
+
+                <select
+                  id="task-member"
+                  value={
+                    selectedMemberId
+                  }
+                  onChange={(event) =>
+                    setSelectedMemberId(
+                      event.target.value,
+                    )
+                  }
+                  disabled={
+                    isSaving ||
+                    !selectedTeam
+                  }
+                  required
+                  className={`w-full rounded-xl border px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 disabled:cursor-not-allowed disabled:opacity-60 ${
+                    isDarkMode
+                      ? "border-slate-700 bg-slate-950 text-white"
+                      : "border-slate-300 bg-white text-slate-900"
+                  }`}
+                >
+                  <option value="">
+                    {selectedTeam
+                      ? "Select a member"
+                      : "Select a team first"}
+                  </option>
+
+                  {selectedTeam?.members.map(
+                    (member) => (
+                      <option
+                        key={member.userId}
+                        value={
+                          member.userId
+                        }
+                      >
+                        {member.profile
+                          .fullName ||
+                          member.profile
+                            .email}{" "}
+                        —{" "}
+                        {member.role ===
+                        "supervisor"
+                          ? "Supervisor"
+                          : "Member"}
+                      </option>
+                    ),
+                  )}
+                </select>
+              </div>
+            </div>
           )}
+
+          {!isAnonymous &&
+            selectedTeam && (
+              <div
+                className={`flex items-center gap-3 rounded-2xl border px-4 py-3 ${
+                  isDarkMode
+                    ? "border-blue-500/20 bg-blue-500/10 text-blue-200"
+                    : "border-blue-100 bg-blue-50 text-blue-800"
+                }`}
+              >
+                <Users size={20} />
+
+                <div>
+                  <p className="text-sm font-bold">
+                    {selectedTeam.name}
+                  </p>
+
+                  <p className="text-xs opacity-80">
+                    {
+                      selectedTeam.members
+                        .length
+                    }{" "}
+                    {selectedTeam.members
+                      .length === 1
+                      ? "member"
+                      : "members"}{" "}
+                    available
+                  </p>
+                </div>
+              </div>
+            )}
 
           <div>
             <label
@@ -470,7 +582,9 @@ export default function CreateTaskModal({
               type="text"
               value={title}
               onChange={(event) =>
-                setTitle(event.target.value)
+                setTitle(
+                  event.target.value,
+                )
               }
               placeholder="Enter task title"
               required
@@ -534,7 +648,9 @@ export default function CreateTaskModal({
               type="date"
               value={dueDate}
               onChange={(event) =>
-                setDueDate(event.target.value)
+                setDueDate(
+                  event.target.value,
+                )
               }
               required
               disabled={isSaving}
@@ -544,18 +660,6 @@ export default function CreateTaskModal({
                   : "border-slate-300 bg-white text-slate-900"
               }`}
             />
-
-            <p
-              className={`mt-2 text-xs leading-5 ${
-                isDarkMode
-                  ? "text-slate-500"
-                  : "text-slate-500"
-              }`}
-            >
-              GamePlan automatically assigns
-              deadline colors based on due-date
-              order.
-            </p>
           </div>
 
           <label
@@ -625,8 +729,11 @@ export default function CreateTaskModal({
               type="submit"
               disabled={
                 isSaving ||
-                isLoadingTeams ||
-                teams.length === 0
+                !user ||
+                !canCreateTask ||
+                (!isAnonymous &&
+                  (isLoadingTeams ||
+                    teams.length === 0))
               }
               className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-400"
             >
@@ -635,6 +742,8 @@ export default function CreateTaskModal({
                   <LoaderCircle className="h-5 w-5 animate-spin" />
                   Creating task...
                 </>
+              ) : isAnonymous ? (
+                "Create Personal Task"
               ) : (
                 "Create Task"
               )}

@@ -49,7 +49,8 @@ type AuthContextValue = {
 
   signOut: () => Promise<AuthResult>;
 
-  continueAsGuest: () => Promise<AuthResult>;
+  continueAsGuest:
+    () => Promise<AuthResult>;
 
   refreshProfile: () => Promise<void>;
 };
@@ -57,7 +58,7 @@ type AuthContextValue = {
 type ProfileRow = {
   id: string;
   full_name: string;
-  email: string;
+  email: string | null;
   role: UserRole;
   created_at: string;
   updated_at: string;
@@ -78,7 +79,7 @@ function mapProfile(
   return {
     id: profile.id,
     fullName: profile.full_name,
-    email: profile.email,
+    email: profile.email ?? "",
     role: profile.role,
     createdAt: profile.created_at,
     updatedAt: profile.updated_at,
@@ -159,6 +160,11 @@ export function AuthProvider({
       return;
     }
 
+    /*
+     * Guest users do not need a permanent
+     * application profile loaded into the
+     * frontend.
+     */
     if (isAnonymousUser(nextUser)) {
       setProfile(null);
       return;
@@ -167,14 +173,13 @@ export function AuthProvider({
     await loadProfile(nextUser.id);
   }
 
-  async function createGuestSession(): Promise<AuthResult> {
+  async function createGuestSession():
+    Promise<AuthResult> {
     setAuthError(null);
 
-    const {
-      data,
-      error,
-    } =
-      await supabase.auth.signInAnonymously();
+    const { data, error } =
+      await supabase.auth
+        .signInAnonymously();
 
     if (error) {
       const message =
@@ -235,30 +240,9 @@ export function AuthProvider({
           );
         }
 
-        if (currentSession) {
-          await applySession(
-            currentSession,
-          );
-          return;
-        }
-
-        const {
-          data,
-          error: guestError,
-        } =
-          await supabase.auth.signInAnonymously();
-
-        if (!isMounted) {
-          return;
-        }
-
-        if (guestError) {
-          throw new Error(
-            `Unable to create a guest session: ${guestError.message}`,
-          );
-        }
-
-        await applySession(data.session);
+        await applySession(
+          currentSession,
+        );
       } catch (error) {
         if (!isMounted) {
           return;
@@ -363,7 +347,8 @@ export function AuthProvider({
     };
   }
 
-  async function signOut(): Promise<AuthResult> {
+  async function signOut():
+    Promise<AuthResult> {
     setAuthError(null);
 
     const { error } =
@@ -385,7 +370,13 @@ export function AuthProvider({
     };
   }
 
-  async function continueAsGuest(): Promise<AuthResult> {
+  async function continueAsGuest():
+    Promise<AuthResult> {
+    /*
+     * Reuse the current guest session
+     * instead of creating duplicate
+     * anonymous accounts.
+     */
     if (
       session?.user &&
       isAnonymousUser(session.user)
@@ -395,13 +386,23 @@ export function AuthProvider({
       };
     }
 
+    /*
+     * A signed-in permanent user must be
+     * signed out before starting a guest
+     * session.
+     */
     if (session) {
       const { error } =
         await supabase.auth.signOut();
 
       if (error) {
+        const message =
+          `Unable to sign out of the current account: ${error.message}`;
+
+        setAuthError(message);
+
         return {
-          error: error.message,
+          error: message,
         };
       }
     }

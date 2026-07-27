@@ -34,10 +34,14 @@ function LoginPage() {
     );
   }
 
+  /*
+   * Signed-in users should go directly
+   * to the task board.
+   */
   if (user) {
     return (
       <Navigate
-        to="/"
+        to="/tasks"
         replace
       />
     );
@@ -56,7 +60,7 @@ function LoginPage() {
         return;
       }
 
-      navigate("/", {
+      navigate("/tasks", {
         replace: true,
       });
     } catch (error) {
@@ -106,6 +110,7 @@ function LoginPage() {
           {isStartingGuestSession ? (
             <>
               <span className="h-5 w-5 animate-spin rounded-full border-2 border-blue-300 border-t-blue-700" />
+
               Preparing guest workspace...
             </>
           ) : (
@@ -113,15 +118,17 @@ function LoginPage() {
               <span aria-hidden="true">
                 👤
               </span>
+
               Continue as Guest
             </>
           )}
         </button>
 
         <p className="text-center text-xs leading-5 text-slate-500">
-          Guest tasks are stored securely
-          in your anonymous session and are
-          not shared with other guests.
+          Guests can create, edit, move,
+          approve, reject, and delete their
+          personal tasks. Guest tasks are
+          not shared with other users.
         </p>
       </div>
     </AuthLayout>
